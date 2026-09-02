@@ -1,0 +1,2652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教师工作台 · 我的讲台</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+<script src="xlsx.full.min.js"></script>
+<style>
+:root{
+  --board:#16382c;
+  --board-2:#1e4a3a;
+  --board-3:#265a47;
+  --paper:#f6f3ea;
+  --card:#fffdf7;
+  --ink:#24332c;
+  --muted:#6c7065;
+  --faint:#9a9c8f;
+  --line:#e4ddca;
+  --accent:#c9702d;
+  --accent-soft:#f0d9b4;
+  --chalk:#f5e6c8;
+  --good:#2f7d5a;
+  --warn:#bd8a2f;
+  --bad:#bf3f2e;
+  --info:#3d6ea8;
+  --shadow:0 1px 2px rgba(38,50,40,.06),0 8px 24px -12px rgba(38,50,40,.18);
+  --radius:14px;
+  --sidebar-w:236px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  background:var(--paper);color:var(--ink);line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.display{font-family:"Noto Serif SC","Songti SC",serif}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#cfc8b6;border-radius:6px;border:2px solid var(--paper)}
+::-webkit-scrollbar-track{background:transparent}
+
+.app{display:flex;min-height:100vh}
+.sidebar{
+  width:var(--sidebar-w);background:linear-gradient(160deg,var(--board) 0%,var(--board-2) 60%,var(--board-3) 100%);
+  color:var(--chalk);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;
+  padding:20px 14px;transition:transform .28s ease;
+}
+.sidebar-brand{display:flex;align-items:center;gap:12px;padding:6px 10px 20px}
+.brand-mark{width:42px;height:42px;border-radius:12px;flex:none;background:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px -6px rgba(0,0,0,.5)}
+.brand-mark svg{width:24px;height:24px;color:#fff}
+.brand-text b{display:block;font-size:17px;letter-spacing:.06em;font-family:"Noto Serif SC",serif}
+.brand-text span{font-size:11px;color:rgba(245,230,200,.7);letter-spacing:.12em}
+.nav{flex:1;display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;color:rgba(245,230,200,.78);font-size:14.5px;font-weight:500;transition:background .18s,color .18s;position:relative}
+.nav-item svg{width:19px;height:19px;flex:none;opacity:.9}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.14);color:#fff;font-weight:600}
+.nav-item.active::before{content:"";position:absolute;left:-14px;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;background:var(--accent)}
+.nav-badge{margin-left:auto;font-size:11px;background:var(--accent);color:#fff;border-radius:20px;padding:1px 8px;font-weight:600}
+.sidebar-foot{padding:12px 10px 4px;font-size:11.5px;color:rgba(245,230,200,.55);border-top:1px solid rgba(255,255,255,.12);line-height:1.7}
+.sidebar-foot b{color:var(--chalk);font-size:12.5px}
+
+.main{flex:1;margin-left:var(--sidebar-w);min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;padding:14px 28px;background:rgba(246,243,234,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.burger{display:none;padding:8px;border-radius:8px}
+.burger svg{width:22px;height:22px}
+.topbar-title{font-size:19px;font-weight:700}
+.topbar-sub{font-size:12.5px;color:var(--muted);margin-top:1px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.topbar-date{font-size:13px;color:var(--muted);text-align:right;line-height:1.4}
+.topbar-date b{display:block;font-size:14px;color:var(--ink);font-weight:600}
+.icon-btn{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s}
+.icon-btn:hover{background:var(--line)}
+.icon-btn svg{width:20px;height:20px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--board);color:var(--chalk);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px}
+
+.content{flex:1;padding:26px 28px 48px;max-width:1320px;width:100%}
+.view{display:none}
+.view.active{display:block;animation:fadeUp .32s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.section-head h2{font-size:21px;font-weight:700;letter-spacing:.02em}
+.section-head .sub{color:var(--muted);font-size:13px;margin-top:4px}
+.chalk-underline{position:relative;display:inline-block;padding-bottom:8px}
+.chalk-underline::after{content:"";position:absolute;left:0;bottom:0;height:4px;width:100%;background:var(--accent);border-radius:6px;opacity:.75;transform:skewX(-6deg)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+.mt-16{margin-top:16px}
+.pad{padding:20px}
+.stat-card{padding:18px 20px;position:relative;overflow:hidden}
+.stat-card .label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.stat-card .value{font-size:30px;font-weight:700;margin-top:8px;font-family:"Noto Serif SC",serif;letter-spacing:.01em}
+.stat-card .value small{font-size:14px;font-weight:500;color:var(--muted);margin-left:4px}
+.stat-card .delta{font-size:12.5px;margin-top:6px;font-weight:600}
+.delta.up{color:var(--good)}.delta.down{color:var(--bad)}.delta.flat{color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;line-height:1.6}
+.tag.green{background:#e2efe7;color:var(--good)}
+.tag.amber{background:#f7ecd6;color:var(--warn)}
+.tag.red{background:#f6e0dc;color:var(--bad)}
+.tag.blue{background:#e2ebf5;color:var(--info)}
+.tag.gray{background:#ece9e0;color:var(--muted)}
+.tag.board{background:var(--board);color:var(--chalk)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:10px;font-size:13.5px;font-weight:600;transition:all .15s}
+.btn svg{width:16px;height:16px}
+.btn-primary{background:var(--board);color:var(--chalk)}
+.btn-primary:hover{background:var(--board-3)}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-accent:hover{filter:brightness(1.06)}
+.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.btn-ghost:hover{background:var(--paper);border-color:#cfc8b6}
+.btn-sm{padding:6px 12px;font-size:12.5px;border-radius:8px}
+.seg{display:inline-flex;background:#e9e5d8;border-radius:10px;padding:3px;gap:2px}
+.seg button{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);transition:all .15s}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg button:not(.on):hover{color:var(--ink)}
+
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600;background:#faf8f0;letter-spacing:.03em}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:#faf7ec}
+tbody tr:last-child td{border-bottom:none}
+td .mono{font-variant-numeric:tabular-nums}
+.small-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-right:9px;vertical-align:middle}
+.small-avatar.m{background:#dde9e2;color:var(--good)}
+
+.hero{position:relative;border-radius:18px;overflow:hidden;color:var(--chalk);background:radial-gradient(1200px 300px at 85% -20%,rgba(201,112,45,.35),transparent 60%),linear-gradient(135deg,var(--board) 0%,var(--board-2) 70%,var(--board-3) 100%);padding:28px 30px;margin-bottom:22px;box-shadow:var(--shadow)}
+.hero::after{content:"";position:absolute;right:-40px;bottom:-60px;width:260px;height:260px;border-radius:50%;border:28px solid rgba(245,230,200,.06)}
+.hero .kicker{font-size:12.5px;letter-spacing:.18em;color:rgba(245,230,200,.72);font-weight:600}
+.hero h2{font-size:28px;font-weight:700;margin-top:8px;letter-spacing:.02em}
+.hero p{font-size:13.5px;color:rgba(245,230,200,.85);margin-top:10px;max-width:620px;line-height:1.7}
+.hero .chips{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.chip{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:600;backdrop-filter:blur(4px)}
+.chip b{color:#fff;margin-right:3px}
+.quick-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.quick-actions .btn{background:var(--accent);color:#fff}
+.quick-actions .btn.ghost{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:var(--chalk)}
+.quick-actions .btn.ghost:hover{background:rgba(255,255,255,.18)}
+
+.mini-card{padding:16px 18px}
+.mini-card h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.mini-card h3 svg{width:17px;height:17px;color:var(--accent)}
+.today-line{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.today-line:last-child{border-bottom:none}
+.today-line .no{flex:none;width:30px;height:30px;border-radius:8px;background:#efe9da;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--accent)}
+.today-line .name{font-weight:600}
+.today-line .meta{color:var(--muted);font-size:12px}
+.today-line.me .no{background:var(--board);color:var(--chalk)}
+.today-line.me{border-left:3px solid var(--accent);padding-left:10px;border-radius:4px}
+.todo-mini{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.todo-mini:last-child{border-bottom:none}
+.todo-mini .dot{flex:none;width:8px;height:8px;border-radius:50%;margin-top:7px}
+.todo-mini .t{flex:1}
+.todo-mini .d{font-size:11.5px;color:var(--muted)}
+.remind-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.remind-item:last-child{border-bottom:none}
+.remind-item .ic{flex:none;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.remind-item .ic svg{width:16px;height:16px}
+.weekbar{display:flex;flex-direction:column;gap:8px}
+.weekbar .row{display:grid;grid-template-columns:120px 1fr 64px;align-items:center;gap:10px;font-size:12.5px}
+.weekbar .lbl{color:var(--muted);font-weight:600}
+.weekbar .track{height:8px;border-radius:6px;background:#ece7d9;overflow:hidden}
+.weekbar .fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),#e0a458)}
+.weekbar .val{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+
+.schedule-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.schedule-grid{display:grid;grid-template-columns:64px repeat(5,1fr);gap:8px}
+.sched-head{background:var(--board);color:var(--chalk);border-radius:10px;padding:10px 8px;text-align:center;font-weight:700;font-size:13px}
+.sched-head.today{background:var(--accent)}
+.sched-time{display:flex;flex-direction:column;justify-content:center;text-align:center;font-size:11px;color:var(--muted);line-height:1.5;background:#f0ecdf;border-radius:10px;padding:6px 2px;min-height:64px}
+.sched-cell{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px;min-height:64px;display:flex;flex-direction:column;gap:4px;transition:box-shadow .15s;cursor:pointer;position:relative}
+.sched-cell:hover{box-shadow:var(--shadow);border-color:var(--accent)}
+.sched-cell .cn{font-size:13.5px;font-weight:700}
+.sched-cell .ct{font-size:11px;color:var(--muted)}
+.sched-cell .cl{font-size:11px;color:var(--faint)}
+.sched-cell.me{background:#fdf3e2;border-color:#e9cda4}
+.sched-cell.me .cn{color:var(--accent)}
+.sched-cell .edit-hint{position:absolute;top:5px;right:6px;font-size:10px;color:var(--faint);opacity:0;transition:opacity .15s;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:0 5px;line-height:1.6}
+.sched-cell:hover .edit-hint{opacity:1}
+
+.class-head{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.class-head .big{font-size:20px;font-weight:700}
+.class-head .stat{font-size:12.5px;color:var(--muted)}
+.stu-search{position:relative;width:220px}
+.stu-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint)}
+.stu-search input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--line);border-radius:10px;background:var(--card);outline:none}
+.stu-search input:focus{border-color:var(--accent)}
+.tag-editor{display:flex;gap:8px;align-items:center}
+.tag-editor input{flex:1}
+.subj-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.subj-row input[type=text]{flex:1;min-width:0}
+.subj-row input[type=number]{width:80px}
+.subj-row .x-btn{cursor:pointer;color:var(--faint);border:none;background:none;font-size:15px;padding:2px 6px}
+.subj-row .x-btn:hover{color:var(--bad)}
+.preset-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.preset-tags .pt{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:16px;padding:3px 10px;font-size:12px;color:var(--muted);cursor:pointer;background:var(--card);transition:all .15s}
+.preset-tags .pt:hover{border-color:var(--accent);color:var(--accent)}
+.preset-tags .pt.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:8px}
+.tag-chip{display:inline-flex;align-items:center;gap:5px;background:#efe9da;border-radius:16px;padding:4px 8px 4px 11px;font-size:12px;font-weight:600;color:var(--ink)}
+.tag-chip b{font-weight:600}
+.tag-chip .x{cursor:pointer;color:var(--faint);display:flex;align-items:center;padding:0 3px;border-radius:50%}
+.tag-chip .x:hover{color:var(--bad);background:#f6e0dc}
+.stu-tag{display:inline-flex;align-items:center;background:#efe9da;border-radius:14px;padding:2px 9px;font-size:11.5px;font-weight:600;color:#5d563f;margin:0 4px 4px 0}
+.stu-tag.hl{background:var(--accent-soft);color:var(--accent)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.tabs button{padding:10px 16px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.pane{display:none}
+.pane.on{display:block;animation:fadeUp .25s ease}
+.role{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px}
+.role.c{background:var(--accent-soft);color:var(--accent)}
+.role.v{background:#dde9e2;color:var(--good)}
+.role.l{background:#e2ebf5;color:var(--info)}
+.role.n{color:var(--faint);background:#ece9e0}
+.attend-row{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px dashed var(--line);font-size:13.5px}
+.attend-row:last-child{border-bottom:none}
+.attend-row .st{font-weight:600;width:120px}
+.log-item{padding:14px 2px;border-bottom:1px dashed var(--line);display:flex;gap:12px}
+.log-item:last-child{border-bottom:none}
+.log-item .date{flex:none;width:52px;text-align:center;background:#f0ecdf;border-radius:10px;padding:6px 4px;height:fit-content}
+.log-item .date b{display:block;font-size:17px;font-weight:700;color:var(--accent);font-family:"Noto Serif SC",serif}
+.log-item .date span{font-size:11px;color:var(--muted)}
+.log-item .bd{flex:1}
+.log-item .bd .tt{font-weight:700;font-size:14px}
+.log-item .bd .ds{font-size:13px;color:var(--muted);margin-top:3px}
+
+.grade-dist{display:flex;align-items:flex-end;gap:10px;height:150px;padding:10px 6px 0}
+.grade-dist .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.grade-dist .bar{width:70%;max-width:44px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--accent),#e0a458);position:relative;min-height:3px;transition:height .4s ease}
+.grade-dist .bar.zero{background:#ddd6c4}
+.grade-dist .cnt{font-size:11.5px;font-weight:700;color:var(--ink)}
+.grade-dist .lbl{font-size:11px;color:var(--muted)}
+.rank-change{font-size:12px;font-weight:700}
+.rank-change.up{color:var(--good)}.rank-change.down{color:var(--bad)}.rank-change.flat{color:var(--faint)}
+.spark{display:flex;align-items:flex-end;gap:3px;height:26px}
+.spark i{width:5px;border-radius:2px;background:var(--accent);opacity:.85}
+.avg-trend{display:flex;align-items:flex-end;gap:14px;height:150px;padding:12px 14px}
+.avg-trend .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.avg-trend .bar{width:46px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--board-3),var(--board));position:relative}
+.avg-trend .cnt{font-size:13px;font-weight:700}
+.avg-trend .lbl{font-size:12px;color:var(--muted)}
+
+.todo-add{display:flex;gap:10px;margin-bottom:14px}
+.todo-add input[type=text]{flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);outline:none}
+.todo-add input[type=text]:focus{border-color:var(--accent)}
+.todo-add select{padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.todo-list .todo-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);transition:background .12s}
+.todo-list .todo-row:last-child{border-bottom:none}
+.todo-list .todo-row:hover{background:#faf7ec}
+.todo-row .ck{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.todo-row .ck svg{width:13px;height:13px;color:#fff;opacity:0}
+.todo-row.done .ck{background:var(--good);border-color:var(--good)}
+.todo-row.done .ck svg{opacity:1}
+.todo-row.done .tt{text-decoration:line-through;color:var(--faint)}
+.todo-row .tt{flex:1;font-size:14px;font-weight:500}
+.todo-row .due{font-size:12px;color:var(--muted);white-space:nowrap}
+.todo-row .del{opacity:0;color:var(--faint);padding:5px;border-radius:6px;transition:all .15s}
+.todo-row:hover .del{opacity:1}
+.todo-row .del:hover{color:var(--bad);background:#f6e0dc}
+.checklist{display:flex;flex-direction:column;gap:0}
+.checklist .item{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px dashed var(--line);font-size:13.5px}
+.checklist .item:last-child{border-bottom:none}
+.checklist .dot{flex:none;width:9px;height:9px;border-radius:50%}
+.checklist .bar{flex:1;height:6px;border-radius:5px;background:#ece7d9;overflow:hidden}
+.checklist .bar i{display:block;height:100%;border-radius:5px;background:var(--accent)}
+.checklist .pct{font-size:12px;font-weight:700;color:var(--muted);width:40px;text-align:right}
+
+.seat-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.seat-stage{background:linear-gradient(rgba(22,56,44,.04),rgba(22,56,44,.04)),var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 18px 26px;box-shadow:var(--shadow);position:relative}
+.seat-stage .board-sign{max-width:360px;margin:0 auto 20px;background:var(--board);color:var(--chalk);text-align:center;padding:10px;border-radius:10px;font-family:"Noto Serif SC",serif;font-size:15px;letter-spacing:.2em;font-weight:600;box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}
+.seat-grid{display:grid;gap:10px;max-width:860px;margin:0 auto}
+.seat{position:relative;aspect-ratio:1.35;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;cursor:pointer;user-select:none;transition:transform .15s,box-shadow .15s;border:1.5px solid transparent}
+.seat:hover{transform:translateY(-2px)}
+.seat .nm{pointer-events:none}
+.seat.empty{background:rgba(236,231,217,.55);border-style:dashed;border-color:#d8d0bb;color:var(--faint);cursor:default}
+.seat.occupied{background:linear-gradient(160deg,#fdf8ed,#f7edda);border-color:#e6d2ac;color:#6b4a22}
+.seat.occupied.selected{border-color:var(--accent);background:linear-gradient(160deg,#fbe3c2,#f3cf9e);box-shadow:0 0 0 3px rgba(201,112,45,.25);transform:translateY(-2px)}
+.seat.occupied .seat-no{position:absolute;top:3px;left:6px;font-size:9px;color:#c9a86a;opacity:.85}
+.seat.occupied.locked{border-color:#c9a86a;border-style:dashed;background:linear-gradient(160deg,#f3ead1,#ecdfc0);box-shadow:inset 0 0 0 1.5px rgba(201,168,106,.5)}
+.seat .lock-ic{position:absolute;top:3px;left:22px;font-size:10px;color:#b98f46;opacity:.9;pointer-events:none;line-height:1}
+.seat .seat-score{position:absolute;bottom:2px;right:6px;font-size:10px;font-weight:700;color:#b5762d;line-height:1}
+.seat .seat-score.none{color:#cbb88f;font-weight:600}
+.seat .seat-g{position:absolute;top:3px;right:6px;font-size:9px;font-weight:700;line-height:1;padding:1px 4px;border-radius:8px;color:#fff}
+.seat .seat-g.m{background:#7aa5c9}
+.seat .seat-g.f{background:#d99aae}
+.seat.occupied .nm{display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:12px 2px 10px;text-align:center;line-height:1.25;overflow:hidden}
+.seat-tip{text-align:center;margin-top:16px;font-size:12.5px;color:var(--muted)}
+.seat-tip b{color:var(--accent)}
+.layout-row{display:flex;align-items:center;gap:8px;background:#f0ecdf;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600}
+.layout-row input{width:52px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);text-align:center}
+.layout-row select{padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+.lock-hint{font-size:12px;color:var(--muted);font-weight:500}
+
+.modal-mask{position:fixed;inset:0;background:rgba(22,42,34,.5);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.modal-mask.show{display:flex}
+.modal{background:var(--card);border-radius:16px;box-shadow:0 24px 60px -20px rgba(0,0,0,.4);width:100%;max-width:460px;padding:24px;animation:pop .22s ease;max-height:88vh;overflow-y:auto}
+.modal.wide{max-width:640px}
+@keyframes pop{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.modal h3{font-size:17px;margin-bottom:6px}
+.modal .hint{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+.modal label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:12px 0 6px}
+.modal input,.modal select,.modal textarea{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fdfcf7;outline:none}
+.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--accent)}
+.modal .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.import-preview{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:10px}
+.import-preview table{font-size:12.5px}
+.import-preview th,.import-preview td{padding:7px 10px}
+.import-note{font-size:12.5px;color:var(--info);background:#e2ebf5;border-radius:8px;padding:9px 12px;margin-top:10px;line-height:1.6}
+
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--board);color:var(--chalk);padding:11px 20px;border-radius:12px;font-size:13.5px;font-weight:600;z-index:200;opacity:0;pointer-events:none;transition:all .28s ease;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);display:flex;align-items:center;gap:9px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast svg{width:17px;height:17px}
+
+.mask{position:fixed;inset:0;background:rgba(22,42,34,.4);z-index:45;display:none;backdrop-filter:blur(2px)}
+@media (max-width:1024px){
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:900px){
+  :root{--sidebar-w:236px}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .burger{display:flex}
+  .mask.show{display:block}
+  .content{padding:20px 16px 40px}
+  .topbar{padding:12px 16px}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .schedule-grid{grid-template-columns:52px repeat(5,minmax(92px,1fr));overflow-x:auto}
+  .hero{padding:22px 20px}
+  .topbar-date{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8l7-5 7 5M7 21h10"/><path d="M7 8v13M17 8v13"/></svg>
+      </div>
+      <div class="brand-text"><b>我的讲台</b><span>TEACHER DESK</span></div>
+    </div>
+    <nav class="nav" id="nav">
+      <a class="nav-item" data-route="home" href="#/home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>工作台</a>
+      <a class="nav-item" data-route="schedule" href="#/schedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/><path d="M7 14h.01M12 14h.01M17 14h.01M7 17.5h.01M12 17.5h.01M17 17.5h.01"/></svg>课表管理</a>
+      <a class="nav-item" data-route="class" href="#/class"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>班级管理</a>
+      <a class="nav-item" data-route="grades" href="#/grades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>成绩分析</a>
+      <a class="nav-item" data-route="tasks" href="#/tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>个人事务</a>
+      <a class="nav-item" data-route="seating" href="#/seating"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>座位排列</a>
+    </nav>
+    <div class="sidebar-foot">
+      <b id="sideClass">初二(3)班 · 物理</b><br>
+      <span id="sideTerm">2025—2026 学年 第一学期</span><br>
+      教学第 <span id="sideWeek">6</span> 周
+    </div>
+  </aside>
+  <div class="mask" id="mask"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="burger" id="burger" aria-label="菜单">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div>
+        <div class="topbar-title" id="topTitle">工作台</div>
+        <div class="topbar-sub" id="topSub">概览今日安排</div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-date"><b id="todayDate"></b><span id="todayWeek"></span></div>
+        <button class="icon-btn" title="设置" id="btnSettings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <div class="avatar" id="avatarBtn">陈</div>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- ===== 首页 ===== -->
+      <section class="view" data-view="home">
+        <div class="hero">
+          <div class="kicker">TEACHER WORKSPACE</div>
+          <h2 id="heroHello">老师，下午好</h2>
+          <p id="heroP">今天是<span id="heroDate"></span>，教学第 <b id="heroWeek">6</b> 周。下午有一节物理课（第5节 · 实验楼302），别忘带上实验器材清单。</p>
+          <div class="chips" id="heroChips"></div>
+          <div class="quick-actions">
+            <button class="btn" data-goto="schedule">查看今日课表
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+            <button class="btn ghost" data-goto="tasks">处理待办</button>
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="card mini-card">
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>今日课程</h3>
+            <div id="todaySchedule"></div>
+            <div class="mt-16"><button class="btn btn-ghost btn-sm" data-goto="schedule">查看完整课表</button></div>
+          </div>
+          <div class="card mini-card">
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>今日待办</h3>
+            <div id="todayTodos"></div>
+            <div class="mt-16"><button class="btn btn-ghost btn-sm" data-goto="tasks">全部待办</button></div>
+          </div>
+          <div class="card mini-card">
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>班级提醒</h3>
+            <div id="homeReminds"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-2 mt-16">
+          <div class="card mini-card">
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>本周成绩概览</h3>
+            <div class="grid grid-4" id="gradeStats"></div>
+          </div>
+          <div class="card mini-card">
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>本周教学投入</h3>
+            <div class="weekbar" id="weekBar"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 课表 ===== -->
+      <section class="view" data-view="schedule">
+        <div class="section-head">
+          <div>
+            <h2 class="chalk-underline">课表管理</h2>
+            <div class="sub">点击任意课程格可直接编辑 · 支持 CSV/Excel 导入</div>
+          </div>
+          <div class="seg" id="schedSeg"></div>
+        </div>
+        <div class="schedule-toolbar">
+          <button class="btn btn-ghost btn-sm" id="btnAddClass">＋ 添加班级</button>
+          <button class="btn btn-ghost btn-sm" id="btnDelClass" style="color:var(--bad)">删除班级</button>
+          <div style="width:10px"></div>
+          <button class="btn btn-ghost btn-sm" id="prevWeek">‹ 上周</button>
+          <span style="font-size:13.5px;font-weight:600" id="weekLabel">第 1 周</span>
+          <button class="btn btn-ghost btn-sm" id="nextWeek">下周 ›</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-ghost btn-sm" id="btnSchedImport">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+            导入课表</button>
+          <button class="btn btn-ghost btn-sm" id="btnSchedTpl">下载模板</button>
+          <button class="btn btn-accent btn-sm" id="btnSwap">申请调课</button>
+        </div>
+        <div class="schedule-grid" id="scheduleGrid"></div>
+        <div class="card pad mt-16">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">调课记录</h3>
+          <div id="swapLog"></div>
+        </div>
+      </section>
+
+      <!-- ===== 班级管理 ===== -->
+      <section class="view" data-view="class">
+        <div class="section-head">
+          <div>
+            <h2 class="chalk-underline">班级管理</h2>
+            <div class="sub" id="classSub">初二(3)班 · 学生名单与班务档案</div>
+          </div>
+          <div class="stu-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input id="stuSearch" placeholder="搜索姓名 / 学号…">
+          </div>
+        </div>
+        <div class="tabs" id="classTabs">
+          <button data-tab="list" class="on">学生名单</button>
+          <button data-tab="attend">考勤</button>
+          <button data-tab="discipline">违纪记录</button>
+          <button data-tab="logs">班务日志</button>
+          <button data-tab="contact">家校沟通</button>
+        </div>
+
+        <div class="pane on" data-pane="list">
+          <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" id="btnAddStu">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              新增学生</button>
+            <button class="btn btn-ghost btn-sm" id="btnStuImport">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+              CSV 导入名单</button>
+            <button class="btn btn-ghost btn-sm" id="btnStuTpl">下载名单模板</button>
+            <button class="btn btn-ghost btn-sm" id="btnStuExport">导出名单</button>
+            <button class="btn btn-ghost btn-sm" id="btnStuClear" style="color:var(--bad)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              一键清空</button>
+          </div>
+          <div class="card tbl-wrap">
+            <table>
+              <thead><tr><th>学号</th><th>姓名</th><th>性别</th><th>成绩</th><th>标签</th><th>备注</th><th>操作</th></tr></thead>
+              <tbody id="stuTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="pane" data-pane="attend">
+          <div class="grid grid-4" style="margin-bottom:16px">
+            <div class="card stat-card"><div class="label">今日应到</div><div class="value" id="attTotal">32<small>人</small></div></div>
+            <div class="card stat-card"><div class="label">已到</div><div class="value" id="attHere">30<small>人</small></div></div>
+            <div class="card stat-card"><div class="label">请假</div><div class="value" style="color:var(--warn)" id="attLeave">1<small>人</small></div></div>
+            <div class="card stat-card"><div class="label">缺勤</div><div class="value" style="color:var(--bad)" id="attAbsent">1<small>人</small></div></div>
+          </div>
+          <div class="card pad">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <h3 style="font-size:15px;font-weight:700">今日出勤明细</h3>
+              <button class="btn btn-primary btn-sm" id="btnAddAttend">＋ 添加考勤</button>
+            </div>
+            <div id="attendList"></div>
+          </div>
+        </div>
+
+        <div class="pane" data-pane="discipline">
+          <div class="card pad">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h3 style="font-size:15px;font-weight:700">违纪记录（近一月）</h3>
+              <button class="btn btn-primary btn-sm" id="btnAddDisc">＋ 添加记录</button>
+            </div>
+            <div id="disciplineList"></div>
+          </div>
+        </div>
+
+        <div class="pane" data-pane="logs">
+          <div class="card pad">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <h3 style="font-size:15px;font-weight:700">班务日志</h3>
+              <button class="btn btn-primary btn-sm" id="btnAddLog">＋ 记录一条</button>
+            </div>
+            <div id="logList"></div>
+          </div>
+        </div>
+
+        <div class="pane" data-pane="contact">
+          <div class="card pad">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h3 style="font-size:15px;font-weight:700">家校沟通记录</h3>
+              <button class="btn btn-primary btn-sm" id="btnAddContact">＋ 添加记录</button>
+            </div>
+            <div id="contactList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 成绩分析 ===== -->
+      <section class="view" data-view="grades">
+        <div class="section-head">
+          <div>
+            <h2 class="chalk-underline">成绩分析</h2>
+            <div class="sub" id="gradeSub">点击分数可修改 · 支持 Excel 导入</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <div class="seg" id="subjSeg"></div>
+            <div class="seg" id="gradeSeg"></div>
+            <button class="btn btn-ghost btn-sm" id="btnAddExam">＋ 添加考试</button>
+            <button class="btn btn-ghost btn-sm" id="btnRenameExam">改名</button>
+            <button class="btn btn-ghost btn-sm" id="btnDelExam" style="color:var(--bad)">删除本场</button>
+            <button class="btn btn-ghost btn-sm" id="btnGradeImport">导入成绩</button>
+            <button class="btn btn-ghost btn-sm" id="btnGradeTpl">模板</button>
+          </div>
+        </div>
+
+        <div class="grid grid-4" id="gradeStatCards"></div>
+
+        <div class="grid grid-2 mt-16">
+          <div class="card pad">
+            <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">分数段分布</h3>
+            <div class="sub" style="font-size:12.5px;color:var(--muted);margin-bottom:6px">按成绩高低分组统计</div>
+            <div class="grade-dist" id="gradeDist"></div>
+          </div>
+          <div class="card pad">
+            <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">各次考试平均分对比</h3>
+            <div class="sub" style="font-size:12.5px;color:var(--muted);margin-bottom:6px">班级平均分变化趋势</div>
+            <div class="avg-trend" id="avgTrend"></div>
+          </div>
+        </div>
+
+        <div class="card mt-16">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>排名</th><th>姓名</th><th>本次得分</th><th>较上次</th><th>三次走势</th><th>等级</th><th>薄弱点提示</th></tr></thead>
+              <tbody id="gradeRank"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 个人事务 ===== -->
+      <section class="view" data-view="tasks">
+        <div class="grid grid-2">
+          <div>
+            <div class="section-head">
+              <div>
+                <h2 class="chalk-underline">待办清单</h2>
+                <div class="sub" id="todoCount"></div>
+              </div>
+            </div>
+            <div class="card pad">
+              <div class="todo-add">
+                <input type="text" id="todoInput" placeholder="添加待办，如：批改初二(4)班作业">
+                <select id="todoPri">
+                  <option value="高">高</option>
+                  <option value="中" selected>中</option>
+                  <option value="低">低</option>
+                </select>
+                <button class="btn btn-primary" id="btnAddTodo">添加</button>
+              </div>
+              <div class="todo-list" id="todoList"></div>
+            </div>
+
+            <div class="card pad mt-16">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h3 style="font-size:15px;font-weight:700">教研活动记录</h3>
+                <button class="btn btn-primary btn-sm" id="btnAddResearch">＋ 添加活动</button>
+              </div>
+              <div id="teachResearch"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-head">
+              <div>
+                <h2 class="chalk-underline">职称评审材料</h2>
+                <div class="sub">一级教师（中小学）申报准备</div>
+              </div>
+            </div>
+            <div class="card pad">
+              <div class="checklist" id="titleChecklist"></div>
+            </div>
+            <div class="card pad mt-16">
+              <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">关键时间节点</h3>
+              <div id="deadlineList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 座位排列 ===== -->
+      <section class="view" data-view="seating">
+        <div class="section-head">
+          <div>
+            <h2 class="chalk-underline">座位排列</h2>
+            <div class="sub">点击一名学生，再点击另一座位即可对调</div>
+          </div>
+        </div>
+        <div class="seat-toolbar">
+          <div class="layout-row">
+            行 <input type="number" id="seatRows" min="1" max="12" value="5">
+            列 <input type="number" id="seatCols" min="1" max="12" value="8">
+            <button class="btn btn-ghost btn-sm" id="seatApply">应用布局</button>
+          </div>
+          <div class="layout-row">
+            自动排座
+            <select id="seatStrategy">
+              <option value="scoreDesc">按成绩·优生靠前</option>
+              <option value="scoreAsc">按成绩·优生靠后</option>
+              <option value="scoreMix">成绩搭配·优帮弱</option>
+              <option value="random">随机打散</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="seatAuto">执行排座</button>
+            <button class="btn btn-ghost btn-sm" id="seatLockSel">🔒 锁定/解锁选中</button>
+            <span class="lock-hint">先点学生再点锁定</span>
+          </div>
+          <div class="layout-row">
+            显示成绩
+            <select id="seatSubjectSel"></select>
+            <span class="lock-hint" id="seatExamHint"></span>
+          </div>
+          <div style="flex:1"></div>
+          <button class="btn btn-ghost btn-sm" id="seatExport">导出布局</button>
+          <button class="btn btn-ghost btn-sm" id="seatClearLock">清除全部锁定</button>
+          <button class="btn btn-ghost btn-sm" id="seatSave">保存布局</button>
+          <button class="btn btn-ghost btn-sm" id="seatReset">恢复默认</button>
+        </div>
+        <div class="seat-stage">
+          <div class="board-sign" id="seatBoard">初二（3）班 · 教室座位图</div>
+          <div class="seat-grid" id="seatGrid"></div>
+          <div class="seat-tip"><b>操作提示：</b>点击一名学生后再点另一名学生可交换座位、点空位可将学生移入；点「锁定」固定座位，自动排座不移动已锁定学生；格子内为当前科目成绩。排座依据为当前选中的考试与科目。</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- 设置弹层 -->
+<div class="modal-mask" id="settingsModal">
+  <div class="modal">
+    <h3>工作台设置</h3>
+    <div class="hint">调整班级基础信息，修改后自动保存到本地。</div>
+    <label>班级名称</label>
+    <input id="setClassName" placeholder="如：初二(3)班">
+    <label>我的身份称呼</label>
+    <input id="setTeacher" placeholder="如：陈老师">
+    <div class="row2">
+      <div><label>任教学科</label><input id="setSubject" placeholder="如：物理"></div>
+      <div><label>学期</label><input id="setTerm" placeholder="如：2026—2027 学年 第一学期"></div>
+    </div>
+    <div class="row2">
+      <div><label>开学日期（自动算教学周）</label><input id="setTermStart" type="date"></div>
+      <div><label>座位列数（默认）</label><input id="setCols" type="number" min="1" max="12"></div>
+    </div>
+    <div class="row2">
+      <div><label>座位行数（默认）</label><input id="setRows" type="number" min="1" max="12"></div>
+      <div><label>及格线（满分百分比）</label><input id="setPassRate" type="number" min="0" max="100" placeholder="如 60"></div>
+    </div>
+    <label>全科科目与满分（成绩分析用）</label>
+    <div id="subjManager"></div>
+    <button class="btn btn-ghost btn-sm" id="btnAddSubj" style="margin-top:6px">＋ 添加科目</button>
+    <label style="margin-top:14px">课表时间段（可修改名称与时间，可增删，如午托/晚托）</label>
+    <div id="slotManager"></div>
+    <button class="btn btn-ghost btn-sm" id="btnAddSlot" style="margin-top:6px">＋ 添加时间段</button>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="settingsCancel">取消</button>
+      <button class="btn btn-accent" id="settingsSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 学生编辑弹层 -->
+<div class="modal-mask" id="stuModal">
+  <div class="modal">
+    <h3 id="stuModalTitle">新增学生</h3>
+    <div class="hint">学号用于关联成绩与座位，请保持唯一。</div>
+    <div class="row2">
+      <div><label>学号</label><input id="stuNo" placeholder="如 33"></div>
+      <div><label>姓名</label><input id="stuName" placeholder="学生姓名"></div>
+    </div>
+    <div class="row2">
+      <div><label>性别</label><select id="stuGender"><option>男</option><option>女</option></select></div>
+      <div><label>联系电话</label><input id="stuPhone" placeholder="家长电话"></div>
+    </div>
+    <label>成绩（当前考试）</label>
+    <input id="stuScore" type="number" placeholder="可留空，不限百分制">
+    <label>标签（可自定义，点击标签可删除）</label>
+    <div class="preset-tags" id="stuPresetTags"></div>
+    <div class="tag-editor">
+      <input id="stuTagInput" placeholder="输入自定义标签，如：重点关注、课代表">
+      <button class="btn btn-primary btn-sm" id="stuTagAdd">＋ 添加</button>
+    </div>
+    <div id="stuTagList" class="tag-list"></div>
+    <label>备注</label>
+    <textarea id="stuNote" rows="2" placeholder="如：视力不佳坐前排、物理课代表、重点关注对象…"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="stuCancel">取消</button>
+      <button class="btn btn-accent" id="stuSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 课表单元格编辑弹层 -->
+<div class="modal-mask" id="cellModal">
+  <div class="modal">
+    <h3>编辑课程</h3>
+    <div class="hint" id="cellHint">修改该时段的课程安排。</div>
+    <label>课程科目</label>
+    <select id="cellSubject"></select>
+    <label>教室（我的课时显示）</label>
+    <input id="cellRoom" placeholder="如：实验楼302">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cellDelete" style="color:var(--bad)">清空该格</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" id="cellCancel">取消</button>
+      <button class="btn btn-accent" id="cellSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 成绩编辑弹层 -->
+<div class="modal-mask" id="gradeModal">
+  <div class="modal">
+    <h3 id="gradeModalTitle">修改成绩</h3>
+    <div class="hint">按实际考试计分，不限满分。</div>
+    <label>得分</label>
+    <input id="gradeInput" type="number" placeholder="输入分数">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="gradeCancel">取消</button>
+      <button class="btn btn-accent" id="gradeSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 记录编辑弹层（考勤/违纪/日志/家校/教研通用） -->
+<div class="modal-mask" id="recModal">
+  <div class="modal">
+    <h3 id="recTitle">编辑记录</h3>
+    <div class="hint" id="recHint"></div>
+    <div id="recFields"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="recCancel">取消</button>
+      <button class="btn btn-accent" id="recSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV 导入弹层 -->
+<div class="modal-mask" id="importModal">
+  <div class="modal wide">
+    <h3 id="importTitle">导入数据</h3>
+    <div class="hint" id="importHint">请选择 Excel（.xlsx/.xls）或 CSV 文件。</div>
+    <input type="file" id="importFile" accept=".xlsx,.xls,.csv,.txt">
+    <div id="importPreviewBox"></div>
+    <div class="import-note" id="importNote"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="importCancel">取消</button>
+      <button class="btn btn-accent" id="importConfirm">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+  <span id="toastText"></span>
+</div>
+
+<script>
+/* =========================================================
+   科目选项
+========================================================= */
+const SUBJECT_KEYS = ["语文","数学","英语","物理","化学","生物","历史","地理","道德与法治","体育","音乐","美术","信息技术","自习","班会","大扫除","活动"];
+const SLOTS = [
+  {t:"第1节",time:"08:00-08:45"},
+  {t:"第2节",time:"08:55-09:40"},
+  {t:"第3节",time:"10:00-10:45"},
+  {t:"第4节",time:"10:55-11:40"},
+  {t:"第5节",time:"14:10-14:55"},
+  {t:"第6节",time:"15:05-15:50"},
+  {t:"第7节",time:"16:00-16:45"}
+];
+const DAYS = ["周一","周二","周三","周四","周五"];
+
+/* =========================================================
+   默认数据（示例）
+========================================================= */
+function seedStudents(){
+  const raw = [
+    ["01","陈思远","男","c","138****1021","物理课代表，责任心强"],
+    ["02","李若彤","女","v","139****3345","副班长，协助考勤"],
+    ["03","王浩宇","男","n","137****8856","",""],
+    ["04","张子涵","女","l","136****2210","语文课代表"],
+    ["05","刘梓萱","女","n","158****7734","",""],
+    ["06","赵天宇","男","n","150****9982","重点关注，上课易走神"],
+    ["07","孙雨欣","女","c","159****5510","班长，组织能力强"],
+    ["08","周俊杰","男","n","139****4477","",""],
+    ["09","吴佳琪","女","l","188****2255","英语课代表"],
+    ["10","郑宇航","男","n","137****6689","视力不佳，座位靠前"],
+    ["11","王欣怡","女","n","136****8871","",""],
+    ["12","冯子墨","男","n","150****3300","",""],
+    ["13","蒋思远","女","n","159****9943","",""],
+    ["14","韩沐辰","男","n","138****1177","",""],
+    ["15","杨雅静","女","n","136****5522","",""],
+    ["16","朱俊豪","男","n","151****8803","",""],
+    ["17","秦雨桐","女","c","158****4416","纪律委员"],
+    ["18","许泽楷","男","n","137****2205","",""],
+    ["19","何紫怡","女","n","136****7758","",""],
+    ["20","罗景明","男","n","150****9931","",""],
+    ["21","高语嫣","女","n","159****3387","",""],
+    ["22","林书豪","男","n","138****6644","",""],
+    ["23","徐思琪","女","l","136****2299","数学课代表"],
+    ["24","胡天佑","男","n","151****1106","",""],
+    ["25","苏婉婷","女","n","158****8877","",""],
+    ["26","董浩然","男","n","137****4450","",""],
+    ["27","夏若曦","女","n","136****6682","",""],
+    ["28","彭一鸣","男","n","150****2233","",""],
+    ["29","梁雨欣","女","n","159****7754","",""],
+    ["30","邵文博","男","n","138****9908","",""],
+    ["31","汪诗涵","女","n","136****3321","",""],
+    ["32","曹志远","男","n","151****6670","",""]
+  ];
+  return raw.map(r=>{
+    const note = r[5]||"";
+    const tags = [];
+    if(r[3]==="c") tags.push("班长");
+    if(r[3]==="v") tags.push("副班长");
+    if(r[3]==="l") tags.push("课代表");
+    if(/视力/.test(note)) tags.push("视力保护");
+    if(/关注/.test(note)) tags.push("重点关注");
+    if(/纪律|违纪/.test(note)) tags.push("需引导");
+    return {no:r[0], name:r[1], g:r[2], phone:r[4]||"", tags, note};
+  });
+}
+function seedScores(){
+  // 每场考试 × 每科，按学号关联；scores[gi][subjectName][no]
+  // 物理为基础分，其他科在其基础上按科目满分折算并加扰动
+  const phys = [
+    [82,91,66,78,88,72,95,60,84,77,69,90,58,83,76,71,94,62,85,79,68,87,73,80,92,64,86,75,89,70,81,63],
+    [85,93,70,80,90,75,96,65,87,79,72,92,62,86,78,74,95,66,88,81,71,89,76,83,94,68,88,78,91,73,84,67],
+    [88,95,74,83,92,78,98,69,89,82,75,93,65,88,80,77,97,70,90,84,74,91,79,85,96,72,90,80,93,76,86,71]
+  ];
+  const subjNames = SEED_SUBJECTS.map(s=>s.name);
+  return phys.map(arr=>{
+    const gi = {};
+    subjNames.forEach(sn=>{
+      const full = SEED_SUBJECTS.find(s=>s.name===sn).full;
+      const scale = full/100;
+      const o = {};
+      arr.forEach((v,i)=>{
+        // 该科分数：物理折算到该科满分 + 温和扰动，保证可看
+        let n = Math.round(v*scale + ((i*7+sn.length*3)%9-4));
+        n = Math.max(full*0.35, Math.min(full, n));
+        o[String(i+1).padStart(2,"0")] = n;
+      });
+      gi[sn] = o;
+    });
+    return gi;
+  });
+}
+function seedSchedule(){
+  // [班号] 5天×7节
+  return {
+    "3":[
+      ["语文","数学","英语","物理","体育","音乐","班会"],
+      ["数学","语文","生物","物理","历史","英语","自习"],
+      ["英语","数学","物理","语文","地理","体育","美术"],
+      ["语文","英语","数学","物理","化学","信息技术","自习"],
+      ["数学","语文","英语","生物","体育","物理","大扫除"]
+    ],
+    "4":[
+      ["数学","英语","语文","物理","音乐","体育","班会"],
+      ["语文","数学","英语","地理","物理","历史","自习"],
+      ["英语","物理","数学","语文","生物","体育","美术"],
+      ["数学","语文","物理","英语","道德与法治","信息技术","自习"],
+      ["语文","英语","数学","物理","体育","化学","大扫除"]
+    ]
+  };
+}
+function seedRoom(){
+  // [班号] 物理课默认教室
+  return {"3":"实验楼302","4":"实验楼301"};
+}
+
+const SEED_SETTINGS = {className:"初二(3)班", teacher:"陈老师", subject:"物理", term:"2026—2027 学年 第一学期", rows:5, cols:8, week:6, passRate:60, termStart:"2026-09-01"};
+// 全科科目与满分（成绩分析用，可增删改）
+const SEED_SUBJECTS = [
+  {name:"语文", full:120},
+  {name:"数学", full:120},
+  {name:"英语", full:120},
+  {name:"物理", full:100},
+  {name:"化学", full:100},
+  {name:"生物", full:100},
+  {name:"道德与法治", full:100}
+];
+
+const ATTEND_SEED = [
+  {no:"05",st:"请假",reason:"感冒发烧，医院就诊"},
+  {no:"12",st:"缺勤",reason:"未到校，家长电话未接通"},
+  {no:"19",st:"迟到",reason:"迟到 15 分钟，已约谈"}
+];
+const DISCIPLINE_SEED = [
+  {d:"9.24",s:"赵天宇",t:"上课玩手机",h:"已没收并通知家长"},
+  {d:"9.20",s:"罗景明",t:"课间追逐打闹",h:"批评教育，写检讨"},
+  {d:"9.15",s:"董浩然",t:"未交作业",h:"当天补交并说明"},
+  {d:"9.10",s:"邵文博",t:"课堂纪律差",h:"课后谈话，座位调整"}
+];
+const LOGS_SEED = [
+  {d:"26",m:"9月",t:"运动会报名",ds:"班级报名 18 人，需确认接力名单"},
+  {d:"24",m:"9月",t:"家长会筹备",ds:"确定下周四 19:00 召开，制作 PPT"},
+  {d:"20",m:"9月",t:"月考成绩分析",ds:"物理均分 78.4，较上次 +3.2"},
+  {d:"18",m:"9月",t:"卫生检查",ds:"获年级流动红旗"}
+];
+const CONTACTS_SEED = [
+  {d:"9.26",s:"刘梓萱",m:"家长询问物理补习建议，推荐了错题整理方法"},
+  {d:"9.24",s:"赵天宇",m:"告知手机被没收一事，家长表示配合"},
+  {d:"9.20",s:"王浩宇",m:"电话沟通近期成绩下滑，约定每周反馈"},
+  {d:"9.15",s:"张子涵",m:"家长会前家访预约，确认周六下午"}
+];
+const TODO_SEED = [
+  {id:1,tt:"批改初二(4)班作业（40份）",due:"今天",pri:"高",done:false},
+  {id:2,tt:"处理请假审批",due:"今天",pri:"高",done:false},
+  {id:3,tt:"准备明天物理实验课器材",due:"今天",pri:"中",done:false},
+  {id:4,tt:"上传公开课证明材料",due:"9月30日",pri:"高",done:false},
+  {id:5,tt:"参加年级组物理教研会",due:"周四 15:00",pri:"中",done:true},
+  {id:6,tt:"更新班级通讯录",due:"10月3日",pri:"低",done:false}
+];
+const TITLE_ITEMS = [
+  {k:"本科及以上学历",v:100,need:"学历证书"},
+  {k:"任教年限 ≥ 4 年",v:100,note:"已满 5 年"},
+  {k:"班主任工作 ≥ 2 年",v:100,note:"已满 2 年"},
+  {k:"继续教育学分达标",v:100,note:"72 学时完成"},
+  {k:"公开课 / 教学成果",v:62,note:"《公开课证明》待上传"},
+  {k:"论文 / 案例材料",v:0,note:"尚未准备"}
+];
+const DEADLINES = [
+  {d:"9月30日",t:"提交公开课证明",c:"red"},
+  {d:"10月15日",t:"职称材料初审",c:"amber"},
+  {d:"11月5日",t:"区教育局评审窗口开放",c:"amber"},
+  {d:"11月底",t:"论文材料定稿",c:"gray"}
+];
+const RESEARCH = [
+  {d:"周四 15:00",t:"年级物理组教研会",loc:"会议室A"},
+  {d:"10.8",t:"校级公开课《光的折射》",loc:"实验楼302"},
+  {d:"10.22",t:"区教研活动·新课标研讨",loc:"区教师发展中心"}
+];
+const SWAP_SEED = [
+  {d:"第5周 周二",c:"初二(3)班 物理",from:"第2节",to:"第5节",reason:"班级公开课试讲",status:"已通过"},
+  {d:"第4周 周四",c:"初二(4)班 物理",from:"第4节",to:"第1节",reason:"实验器材冲突",status:"已通过"}
+];
+
+/* =========================================================
+   状态
+========================================================= */
+const KEY = "teacherWorkbench_v2";
+let state = loadState();
+
+function defaultState(){
+  const stu = seedStudents();
+  const scores = seedScores();
+  // 座位：按 settings 行列填满学生
+  const rows = SEED_SETTINGS.rows, cols = SEED_SETTINGS.cols;
+  const cells = new Array(rows*cols).fill(null);
+  stu.forEach((s,i)=>{ if(i<cells.length) cells[i]={no:s.no,name:s.name,locked:false}; });
+  return {
+    settings: {...SEED_SETTINGS},
+    students: stu,
+    scores: scores,               // [ {科目:{学号:分}}, ... ] 每场考试一个
+    exams: ["第一次月考","期中考试","第二次月考"],
+    subjects: JSON.parse(JSON.stringify(SEED_SUBJECTS)),
+    subjectIdx: 0,                // 当前查看的科目下标（-1 表示总分）
+    schedule: seedSchedule(),
+    room: seedRoom(),
+    slots: JSON.parse(JSON.stringify(SLOTS)),
+    schedView: "3",
+    weekOffset: 0,
+    gradeIdx: 2,
+    seating: {rows, cols, cells},
+    todos: JSON.parse(JSON.stringify(TODO_SEED)),
+    logs: JSON.parse(JSON.stringify(LOGS_SEED)),
+    attend: JSON.parse(JSON.stringify(ATTEND_SEED)),
+    discipline: JSON.parse(JSON.stringify(DISCIPLINE_SEED)),
+    contacts: JSON.parse(JSON.stringify(CONTACTS_SEED)),
+    research: JSON.parse(JSON.stringify(RESEARCH)),
+    swapLogs: JSON.parse(JSON.stringify(SWAP_SEED))
+  };
+}
+function loadState(){
+  // 依次尝试：localStorage 主数据 → localStorage 自动备份 → sessionStorage 会话副本
+  const tryData = (raw)=>{
+    if(!raw) return null;
+    try{
+      const s = JSON.parse(raw);
+      if(s && s.students && s.scores && s.schedule && s.settings){
+        normalizeState(s);
+        return s;
+      }
+    }catch(e){}
+    return null;
+  };
+  let s = tryData(localStorage.getItem(KEY));
+  if(!s) s = tryData(localStorage.getItem(KEY+"_bak"));
+  if(!s){ try{ s = tryData(sessionStorage.getItem(KEY)); }catch(e){} }
+  if(s){
+    // 恢复成功：回写主 key 与备份，保持各存储一致
+    try{
+      const data = JSON.stringify(s);
+      localStorage.setItem(KEY, data);
+      localStorage.setItem(KEY+"_bak", data);
+      sessionStorage.setItem(KEY, data);
+    }catch(e){}
+    return s;
+  }
+  return defaultState();
+}
+function saveState(){
+  try{
+    const data = JSON.stringify(state);
+    // 备份上一次完整数据（滚动保留最近两次），再写主 key 与会话副本
+    try{
+      const prev = localStorage.getItem(KEY);
+      localStorage.setItem(KEY+"_bak2", localStorage.getItem(KEY+"_bak")||data);
+      localStorage.setItem(KEY+"_bak", prev||data);
+    }catch(e){}
+    localStorage.setItem(KEY, data);
+    try{ sessionStorage.setItem(KEY, data); }catch(e){}
+  }catch(e){
+    try{ toast("⚠ 数据保存失败："+e.message+"，请勿强制刷新！"); }catch(e2){}
+    console.error("saveState failed:", e);
+  }
+}
+function normalizeState(s){
+  // 兼容旧版本：学生补 tags
+  s.students.forEach(st=>{ if(!Array.isArray(st.tags)) st.tags = []; });
+  const withId = (arr, seed)=>{
+    if(Array.isArray(arr)){ arr.forEach((x,i)=>{ if(x.id==null) x.id = i+1; }); return arr; }
+    return JSON.parse(JSON.stringify(seed)).map((x,i)=>({id:i+1, ...x}));
+  };
+  s.attend = withId(s.attend, ATTEND_SEED);
+  s.discipline = withId(s.discipline, DISCIPLINE_SEED);
+  s.logs = withId(s.logs, LOGS_SEED);
+  s.contacts = withId(s.contacts, CONTACTS_SEED);
+  s.research = withId(s.research, RESEARCH);
+  if(!Array.isArray(s.swapLogs)) s.swapLogs = JSON.parse(JSON.stringify(SWAP_SEED));
+  s.swapLogs.forEach((x,i)=>{ if(x.id==null) x.id = i+1; });
+  // 兼容旧版本：科目与成绩迁移
+  if(!Array.isArray(s.subjects) || !s.subjects.length){
+    s.subjects = JSON.parse(JSON.stringify(SEED_SUBJECTS));
+  } else {
+    // 保证每科有 name/full
+    s.subjects = s.subjects.map(x=>typeof x==="string"?{name:x, full:100}:{name:x.name||"科目", full:+x.full||100});
+  }
+  if(s.subjectIdx==null) s.subjectIdx = 0;
+  // 旧 scores 结构：scores[gi] = {no:score}（单科）→ 迁移为物理科目
+  const first = s.scores[0];
+  if(first && !first[s.subjects[0]&&s.subjects[0].name] && typeof Object.values(first)[0]==="number"){
+    // 旧单科数据：取 settings.subject 作为科目名（缺省物理）
+    const oldSubj = (s.settings && s.settings.subject) || "物理";
+    const newScores = s.scores.map(g=>{
+      const o = {}; o[oldSubj] = g; return o;
+    });
+    // 如果 oldSubj 不在 subjects 里，补上（但避免重复物理）
+    if(!s.subjects.some(x=>x.name===oldSubj)){
+      s.subjects.unshift({name:oldSubj, full:100});
+    }
+    s.scores = newScores;
+  }
+  if(s.settings && s.settings.passRate==null){
+    // 旧 passLine → 折算为百分比（按默认满分 100 计），缺省 60
+    const oldLine = s.settings.passLine;
+    s.settings.passRate = (oldLine!=null && oldLine>0 && oldLine<=100) ? oldLine : 60;
+    delete s.settings.passLine;
+  }
+  // 兼容旧版本：开学日期（用于自动算教学周），缺省 2026-09-01
+  if(s.settings && !s.settings.termStart){
+    s.settings.termStart = "2026-09-01";
+  }
+  // 兼容旧版本：考试场次名（缺省三个默认考试）
+  if(!Array.isArray(s.exams) || !s.exams.length){
+    const defaultExams = ["第一次月考","期中考试","第二次月考"];
+    s.exams = s.scores.map((_,i)=>defaultExams[i] || "第"+(i+1)+"次考试");
+  } else {
+    s.exams = s.exams.map(x=>String(x||""));
+  }
+  // 确保 scores 与 exams 长度一致
+  while(s.scores.length < s.exams.length) s.scores.push({});
+  if(s.gradeIdx==null || s.gradeIdx<0) s.gradeIdx = s.exams.length-1;
+  if(s.gradeIdx >= s.exams.length) s.gradeIdx = s.exams.length-1;
+  // 座位格子补 locked 字段
+  if(s.seating && Array.isArray(s.seating.cells)){
+    s.seating.cells.forEach(c=>{ if(c && c.locked==null) c.locked = false; });
+  }
+  // 兼容旧版本：课表时间段（可自定义/增删），缺省用默认 7 节
+  if(!Array.isArray(s.slots) || !s.slots.length){
+    s.slots = JSON.parse(JSON.stringify(SLOTS));
+  } else {
+    s.slots = s.slots.map(x=>typeof x==="string"?{t:x,time:""}:{t:(x.t||"节次"), time:(x.time||"")});
+  }
+  // 对齐各班级课表列数 = slots.length（不足补自习，多余截断）
+  const slotN = s.slots.length;
+  Object.keys(s.schedule||{}).forEach(k=>{
+    const sched = s.schedule[k];
+    if(!Array.isArray(sched)){ s.schedule[k] = DAYS.map(()=>Array(slotN).fill("自习")); return; }
+    sched.forEach((row,di)=>{
+      if(!Array.isArray(row)){
+        sched[di] = Array(slotN).fill("自习");
+      } else if(row.length < slotN){
+        while(row.length < slotN) row.push("自习");
+      } else if(row.length > slotN){
+        sched[di] = row.slice(0, slotN);
+      }
+    });
+  });
+  return s;
+}
+
+/* =========================================================
+   工具
+========================================================= */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+let toastTimer;
+function toast(msg){
+  $("#toastText").textContent = msg;
+  $("#toast").classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>$("#toast").classList.remove("show"), 2200);
+}
+function roleTxt(r){ return {c:"班长",v:"副班长",l:"科代表",n:""}[r]||""; }
+function roleCls(r){ return {c:"c",v:"v",l:"l",n:"n"}[r]||"n"; }
+// 取某次考试某学号的成绩：si 为科目下标，-1 表示总分（各科之和）
+function scoreOf(no, gi, si){
+  si = (si===undefined||si===null) ? state.subjectIdx : si;
+  const subjMap = state.scores[gi];
+  if(!subjMap) return null;
+  if(si===-1){
+    // 总分：所有科目得分之和（忽略 null）
+    let sum = 0, has = false;
+    state.subjects.forEach((subj)=>{
+      const v = subjMap[subj.name] && subjMap[subj.name][no];
+      if(v!=null && !isNaN(v)){ sum += v; has = true; }
+    });
+    return has ? sum : null;
+  }
+  const subj = state.subjects[si];
+  if(!subj) return null;
+  const v = subjMap[subj.name] && subjMap[subj.name][no];
+  return (v===0?0:(v||null));
+}
+function fullOf(si){
+  si = (si===undefined||si===null) ? state.subjectIdx : si;
+  if(si===-1) return state.subjects.reduce((a,s)=>a+s.full,0);
+  return (state.subjects[si]&&state.subjects[si].full) || 100;
+}
+function gradeLevel(sc, si){
+  if(sc==null) return ["—","gray"];
+  const pl = fullOf(si) * (state.settings.passRate||60)/100;
+  if(sc>=pl*1.2) return ["优","green"];
+  if(sc>=pl) return ["达标","blue"];
+  return ["待提升","red"];
+}
+function statOf(gi, si){
+  si = (si===undefined||si===null) ? state.subjectIdx : si;
+  const vals = state.students.map(s=>scoreOf(s.no,gi,si)).filter(v=>v!=null);
+  if(!vals.length) return {avg:0,max:0,min:0,passRate:0,goodRate:0,n:0};
+  const sum = vals.reduce((a,b)=>a+b,0);
+  const pl = fullOf(si) * (state.settings.passRate||60)/100;
+  return {
+    avg:+ (sum/vals.length).toFixed(1), max:Math.max(...vals), min:Math.min(...vals),
+    passRate:Math.round(vals.filter(x=>x>=pl).length/vals.length*100),
+    goodRate:Math.round(vals.filter(x=>x>=pl*1.2).length/vals.length*100), n:vals.length
+  };
+}
+function downloadFile(name, content, mime){
+  const blob = new Blob(["\ufeff"+content], {type:mime||"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+// 下载 .xlsx 模板（真正的 Excel 文件）
+function downloadXlsx(name, header, rows){
+  const aoa = [header].concat(rows);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = header.map(h=>({wch:Math.max(10, String(h).length*2+2)}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  XLSX.writeFile(wb, name);
+}
+// 读取 .xlsx / .xls / .csv 文件 -> 行数组
+function readSpreadsheet(file, cb){
+  const isXls = /\.(xlsx|xls)$/i.test(file.name);
+  if(isXls){
+    if(typeof XLSX==="undefined"){
+      toast("Excel 解析组件未加载，请刷新页面重试");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e=>{
+      try{
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:"array"});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:""});
+        cb(aoa.map(r=>r.map(c=>c==null?"":String(c).trim())));
+      }catch(err){ toast("读取 Excel 失败："+err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      let text = String(reader.result||"").replace(/^\ufeff/,"");
+      cb(parseCSV(text));
+    };
+    reader.readAsText(file, "utf-8");
+  }
+}
+function parseCSV(text){
+  // 简易 CSV 解析（支持引号包裹）
+  const rows=[]; let row=[], cur="", inQ=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(inQ){
+      if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=ch;
+    } else {
+      if(ch==='"') inQ=true;
+      else if(ch===','){ row.push(cur); cur=""; }
+      else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&text[i+1]==='\n')i++; row.push(cur); rows.push(row); row=[]; cur=""; }
+      else cur+=ch;
+    }
+  }
+  if(cur!==""||row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.some(c=>String(c).trim()!==""));
+}
+
+/* =========================================================
+   路由
+========================================================= */
+const ROUTE_META = {
+  home:["工作台","概览今日安排"],
+  schedule:["课表管理","安排与调课"],
+  class:["班级管理","学生与班务档案"],
+  grades:["成绩分析","成绩与学情"],
+  tasks:["个人事务","待办与职称材料"],
+  seating:["座位排列","教室座位布局"]
+};
+let currentRoute = "home";
+function router(){
+  const h = location.hash.replace(/^#\/?/,"") || "home";
+  const route = ROUTE_META[h] ? h : "home";
+  currentRoute = route;
+  $$(".view").forEach(v=>v.classList.toggle("active", v.dataset.view===route));
+  $$(".nav-item").forEach(n=>n.classList.toggle("active", n.dataset.route===route));
+  const meta = ROUTE_META[route];
+  $("#topTitle").textContent = meta[0];
+  $("#topSub").textContent = meta[1];
+  closeSidebar();
+  render();
+}
+window.addEventListener("hashchange", router);
+
+/* =========================================================
+   渲染分发
+========================================================= */
+function render(){
+  applySettingsToUI();
+  const r = currentRoute;
+  if(r==="home") renderHome();
+  else if(r==="schedule") renderSchedule();
+  else if(r==="class") renderClass();
+  else if(r==="grades") renderGrades();
+  else if(r==="tasks") renderTasks();
+  else if(r==="seating") renderSeating();
+}
+// 根据开学日期自动计算当前教学周（9.1 为第 1 周；开学前按第 1 周计）
+function currentWeek(){
+  const s = state.settings || {};
+  const start = s.termStart || "2026-09-01";
+  const t0 = new Date(String(start).replace(/-/g,"/"));
+  const now = new Date();
+  if(isNaN(t0.getTime())) return s.week||1;
+  const diff = Math.floor((now - t0)/86400000);
+  const w = Math.floor(diff/7)+1;
+  return w>=1 ? w : 1;
+}
+function applySettingsToUI(){
+  const s = state.settings;
+  const wk = currentWeek();
+  $("#sideClass").textContent = `${s.className} · ${s.subject}`;
+  $("#sideTerm").textContent = s.term;
+  $("#sideWeek").textContent = wk;
+  $("#heroWeek").textContent = wk;
+  $("#classSub").textContent = `${s.className} · 学生名单与班务档案`;
+  $("#seatBoard").textContent = s.className + " · 教室座位图";
+  $("#avatarBtn").textContent = s.teacher ? s.teacher.replace(/老师|先生|女士/g,"").slice(0,1) : "师";
+  // hero 文案
+  const hh = $("#heroHello");
+  hh.textContent = (s.teacher||"老师") + "，下午好";
+  $("#heroP").innerHTML = `今天是<span id="heroDate"></span>，教学第 <b id="heroWeek">${wk}</b> 周。今天的安排都在下方，别忘了查看课表与待办。`;
+}
+
+/* ===== 首页 ===== */
+function renderHome(){
+  renderTodaySchedule();
+  renderTodayTodos();
+  renderHomeReminds();
+  renderGradeStats();
+  renderWeekBar();
+  // chips
+  const st = statOf(state.gradeIdx, state.subjectIdx);
+  const curName = state.subjectIdx===-1 ? "总分" : state.subjects[state.subjectIdx].name;
+  $("#heroChips").innerHTML = `
+    <span class="chip"><b>${state.students.length}</b>名学生</span>
+    <span class="chip"><b>${state.todos.filter(t=>!t.done).length}</b>项待办</span>
+    <span class="chip"><b>${state.attend.filter(a=>a.st==="请假").length}</b>人请假待批</span>
+    <span class="chip"><b>${st.avg}</b>${curName}均分</span>`;
+}
+function renderTodaySchedule(){
+  const cls = state.schedView;
+  const sched = state.schedule[cls];
+  let html = "";
+  for(let s=0;s<state.slots.length;s++){
+    const sub = sched[0][s];
+    const isMe = sub===state.settings.subject;
+    html += `<div class="today-line${isMe?" me":""}"><div class="no">${s+1}</div>
+      <div><div class="name">${esc(sub)}</div><div class="meta">${state.slots[s].t} ${state.slots[s].time}</div></div>
+      ${isMe?`<span class="tag amber" style="margin-left:auto">我的课</span>`:""}</div>`;
+  }
+  $("#todaySchedule").innerHTML = html;
+}
+function renderTodayTodos(){
+  const list = state.todos.filter(t=>!t.done).slice(0,4);
+  $("#todayTodos").innerHTML = list.length ? list.map(t=>`
+    <div class="todo-mini"><span class="dot" style="background:${t.pri==="高"?"var(--bad)":t.pri==="中"?"var(--warn)":"var(--good)"}"></span>
+    <div class="t">${esc(t.tt)}<div class="d">${esc(t.due)} · ${t.pri}优先级</div></div></div>`).join("")
+    : `<div style="font-size:13px;color:var(--muted)">今天没有待办，休息一下吧。</div>`;
+}
+function renderHomeReminds(){
+  const leave = state.attend.filter(a=>a.st==="请假").length;
+  const absent = state.attend.filter(a=>a.st==="缺勤").length;
+  const items = [
+    {ic:"bad", t:`${leave} 人请假待审批`, d:"家长已提交申请"},
+    {ic:"warn", t:`${absent} 人缺勤未联系上`, d:"需尽快电话确认"},
+    {ic:"good", t:"明天实验课器材", d:"清单已发至教研群"}
+  ];
+  const colors = {bad:["#f6e0dc","var(--bad)"],warn:["#f7ecd6","var(--warn)"],good:["#e2efe7","var(--good)"]};
+  $("#homeReminds").innerHTML = items.map(it=>{
+    const c = colors[it.ic];
+    return `<div class="remind-item"><div class="ic" style="background:${c[0]};color:${c[1]}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20L12 3z"/><path d="M12 9v5M12 17.5h.01"/></svg></div>
+    <div><div style="font-weight:600">${it.t}</div><div style="font-size:12px;color:var(--muted)">${it.d}</div></div></div>`;
+  }).join("");
+}
+function renderGradeStats(){
+  const st = statOf(state.gradeIdx, state.subjectIdx);
+  const curName = state.subjectIdx===-1 ? "总分" : state.subjects[state.subjectIdx].name;
+  const cards = [
+    ["平均分("+curName+")", st.avg, "up"],
+    ["最高分", st.max, "up"],
+    ["及格率", st.passRate+"%", "up"],
+    ["优秀率", st.goodRate+"%", "flat"]
+  ];
+  $("#gradeStats").innerHTML = cards.map(c=>`
+    <div class="card stat-card"><div class="label">${c[0]}</div>
+      <div class="value">${c[1]}</div>
+      <div class="delta ${c[2]}">本次考试</div></div>`).join("");
+}
+function renderWeekBar(){
+  const rows = [
+    ["上课", 12, "节"], ["备课批改", 8, "小时"], ["班级管理", 5, "小时"], ["教研学习", 3, "小时"]
+  ];
+  const max = 12;
+  $("#weekBar").innerHTML = rows.map(r=>`
+    <div class="row"><div class="lbl">${r[0]}</div>
+      <div class="track"><div class="fill" style="width:${Math.round(r[1]/max*100)}%"></div></div>
+      <div class="val">${r[1]}${r[2]}</div></div>`).join("");
+}
+
+/* ===== 课表 ===== */
+function renderSchedule(){
+  $("#weekLabel").textContent = `第 ${currentWeek()+state.weekOffset} 周`;
+  // 动态渲染班级按钮
+  const keys = Object.keys(state.schedule);
+  if(!keys.includes(state.schedView)) state.schedView = keys[0];
+  $("#schedSeg").innerHTML = keys.map(k=>`
+    <button data-v="${esc(k)}" class="${k===state.schedView?"on":""}">班级 ${esc(k)}</button>`).join("");
+  const cls = state.schedView;
+  const sched = state.schedule[cls];
+  const subject = state.settings.subject;
+  let html = `<div class="sched-head">节次/时段</div>`;
+  DAYS.forEach((d,i)=>html+=`<div class="sched-head${i===0?" today":""}">${d}</div>`);
+  for(let s=0;s<state.slots.length;s++){
+    html += `<div class="sched-time"><b>${state.slots[s].t}</b><span>${state.slots[s].time}</span></div>`;
+    for(let d=0;d<5;d++){
+      const sub = sched[d][s];
+      const isMe = sub===subject;
+      const room = isMe ? (state.room[cls]||"") : "";
+      if(sub==="自习"||sub==="大扫除"||sub==="班会"&&!isMe){
+        html += `<div class="sched-cell" data-d="${d}" data-s="${s}" title="点击修改"><div class="cn">${esc(sub)}</div><span class="edit-hint">编辑</span></div>`;
+      } else if(isMe){
+        html += `<div class="sched-cell me" data-d="${d}" data-s="${s}" title="点击修改"><div class="cn">${subject} · ${state.settings.className}</div><div class="ct">${room}</div><span class="tag red" style="align-self:flex-start">我的课</span><span class="edit-hint">编辑</span></div>`;
+      } else {
+        html += `<div class="sched-cell" data-d="${d}" data-s="${s}" title="点击修改"><div class="cn">${esc(sub)}</div><div class="ct">科任课</div><span class="edit-hint">编辑</span></div>`;
+      }
+    }
+  }
+  $("#scheduleGrid").innerHTML = html;
+  $("#swapLog").innerHTML = state.swapLogs.map(l=>`
+    <div class="remind-item"><div class="ic" style="background:#e2ebf5;color:var(--info)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M8 21H3v-5M21 3l-7 7M3 21l7-7"/></svg></div>
+    <div style="flex:1"><div style="font-weight:600">${esc(l.d)} · ${esc(l.c)}</div>
+      <div style="font-size:12px;color:var(--muted)">${esc(l.from)} → ${esc(l.to)} · ${esc(l.reason)}</div></div>
+    <span class="tag ${l.status==="已通过"?"green":"amber"}">${l.status}</span>
+    <button class="btn btn-ghost btn-sm" data-del="${l.id}" style="color:var(--bad)">删</button></div>`).join("");
+}
+// 课表单元格编辑
+let cellPos = null;
+function openCell(d,s){
+  cellPos = {d,s};
+  const cls = state.schedView;
+  const cur = state.schedule[cls][d][s];
+  $("#cellHint").textContent = `${DAYS[d]} ${state.slots[s].t} · ${state.settings.className}`;
+  $("#cellSubject").innerHTML = SUBJECT_KEYS.map(k=>`<option ${k===cur?"selected":""}>${k}</option>`).join("");
+  $("#cellRoom").value = state.room[cls] || "";
+  $("#cellModal").classList.add("show");
+}
+
+/* ===== 班级管理 ===== */
+let classTab = "list";
+function renderClass(){
+  renderStuTable("");
+  renderAttend();
+  renderDiscipline();
+  renderLogs();
+  renderContacts();
+}
+function renderStuTable(kw){
+  const q = (kw||"").trim().toLowerCase();
+  const rows = state.students.map((s)=>{
+    if(q && !s.name.toLowerCase().includes(q) && !s.no.includes(q)) return "";
+    const sc = scoreOf(s.no, state.gradeIdx, state.subjectIdx);
+    const lv = gradeLevel(sc, state.subjectIdx);
+    const tags = (s.tags||[]).map((t,i)=>`<span class="stu-tag ${i%2?"":"hl"}">${esc(t)}</span>`).join("");
+    return `<tr>
+      <td class="mono">${s.no}</td>
+      <td><span class="small-avatar ${s.g==="女"?"m":""}">${s.name[0]}</span><b>${s.name}</b></td>
+      <td><span style="color:${s.g==="女"?"var(--info)":"var(--ink)"}">${s.g||"—"}</span></td>
+      <td><button class="btn btn-ghost btn-sm" data-grade="${s.no}" title="点击修改成绩"><b class="mono" style="color:${lv[1]==="green"?"var(--good)":lv[1]==="red"?"var(--bad)":"var(--ink)"}">${sc==null?"—":sc}</b></button></td>
+      <td style="min-width:110px">${tags||'<span style="color:var(--faint);font-size:12px">—</span>'}</td>
+      <td style="max-width:200px;white-space:normal;color:var(--muted);font-size:12.5px">${esc(s.note)||"—"}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" data-edit="${s.no}">编辑</button>
+        <button class="btn btn-ghost btn-sm" data-del="${s.no}" style="color:var(--bad)">删除</button>
+      </td></tr>`;
+  }).join("");
+  $("#stuTable").innerHTML = rows || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:24px">暂无学生，请点击"新增学生"或"导入名单"</td></tr>`;
+}
+function renderAttend(){
+  $("#attTotal").innerHTML = `${state.students.length}<small>人</small>`;
+  const leave = state.attend.filter(a=>a.st==="请假").length;
+  const absent = state.attend.filter(a=>a.st==="缺勤").length;
+  const late = state.attend.filter(a=>a.st==="迟到").length;
+  $("#attHere").innerHTML = `${state.students.length-leave-absent-late}<small>人</small>`;
+  $("#attLeave").innerHTML = `${leave}<small>人</small>`;
+  $("#attAbsent").innerHTML = `${absent}<small>人</small>`;
+  $("#attendList").innerHTML = state.attend.map(a=>{
+    const s = state.students.find(x=>x.no===a.no);
+    return `<div class="attend-row"><span class="st">${a.no}号 ${s?s.name:""}</span>
+      <span class="tag ${a.st==="请假"?"blue":a.st==="迟到"?"amber":"red"}">${a.st}</span>
+      <span style="color:var(--muted);flex:1;font-size:12.5px">${esc(a.reason)}</span>
+      <button class="btn btn-ghost btn-sm" data-edit="attend:${a.id}">编辑</button>
+      <button class="btn btn-ghost btn-sm" data-del="attend:${a.id}" style="color:var(--bad)">删</button></div>`;
+  }).join("") || `<div style="font-size:13px;color:var(--muted);padding:6px 0">今日全勤</div>`;
+}
+function renderDiscipline(){
+  $("#disciplineList").innerHTML = state.discipline.map(d=>`
+    <div class="remind-item"><div class="ic" style="background:#f6e0dc;color:var(--bad)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
+    <div style="flex:1"><div style="font-weight:600">${d.d} · ${esc(d.s)} · ${esc(d.t)}</div>
+      <div style="font-size:12px;color:var(--muted)">${esc(d.h)}</div></div>
+    <button class="btn btn-ghost btn-sm" data-edit="disc:${d.id}">编辑</button>
+    <button class="btn btn-ghost btn-sm" data-del="disc:${d.id}" style="color:var(--bad)">删</button></div>`).join("") || `<div style="font-size:13px;color:var(--muted);padding:6px 0">暂无违纪记录</div>`;
+}
+function renderLogs(){
+  $("#logList").innerHTML = state.logs.map(l=>`
+    <div class="log-item"><div class="date"><b>${l.d}</b><span>${l.m}</span></div>
+    <div class="bd"><div class="tt">${esc(l.t)}</div><div class="ds">${esc(l.ds)}</div></div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <button class="btn btn-ghost btn-sm" data-edit="log:${l.id}">编辑</button>
+      <button class="btn btn-ghost btn-sm" data-del="log:${l.id}" style="color:var(--bad)">删</button>
+    </div></div>`).join("") || `<div style="font-size:13px;color:var(--muted);padding:6px 0">暂无日志</div>`;
+}
+function renderContacts(){
+  $("#contactList").innerHTML = state.contacts.map(c=>`
+    <div class="log-item"><div class="date"><b>${c.d.split(".")[1]}</b><span>${c.d.split(".")[0]}月</span></div>
+    <div class="bd"><div class="tt">${esc(c.s)}</div><div class="ds">${esc(c.m)}</div></div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <button class="btn btn-ghost btn-sm" data-edit="contact:${c.id}">编辑</button>
+      <button class="btn btn-ghost btn-sm" data-del="contact:${c.id}" style="color:var(--bad)">删</button>
+    </div></div>`).join("") || `<div style="font-size:13px;color:var(--muted);padding:6px 0">暂无家校沟通记录</div>`;
+}
+
+/* ===== 成绩 ===== */
+function renderGrades(){
+  const gi = state.gradeIdx;
+  const si = state.subjectIdx;
+  // 考试切换（动态）
+  $("#gradeSeg").innerHTML = state.exams.map((name,i)=>`<button data-g="${i}" class="${i===gi?"on":""}">${esc(name)}</button>`).join("");
+  // 科目切换
+  const subjBtns = state.subjects.map((s,i)=>`<button data-s="${i}" class="${i===si?"on":""}">${s.name}</button>`).join("")
+    + `<button data-s="-1" class="${si===-1?"on":""}">总分</button>`;
+  $("#subjSeg").innerHTML = subjBtns;
+  const curName = si===-1 ? "总分（各科合计）" : state.subjects[si].name;
+  const examName = state.exams[gi] || "本场考试";
+  $("#gradeSub").textContent = `${examName} · ${curName} · 满分 ${fullOf(si)} · 点击分数可修改 · 支持 Excel 导入`;
+  const st = statOf(gi, si);
+  const cards = [
+    ["班级平均分", st.avg, "up"],
+    ["最高分", st.max, "up"],
+    ["最低分", st.min, "down"],
+    ["及格率", st.passRate+"%", "up"]
+  ];
+  $("#gradeStatCards").innerHTML = cards.map(c=>`
+    <div class="card stat-card"><div class="label">${c[0]}</div><div class="value">${c[1]}</div></div>`).join("");
+  // 分布：按及格线动态分 5 档
+  const pl = fullOf(si) * (state.settings.passRate||60)/100;
+  const step = Math.round(pl/3);
+  const bands = [[`<${pl}`,0],[`${pl}~${pl+step-1}`,0],[`${pl+step}~${pl+2*step-1}`,0],[`${pl+2*step}~${pl+3*step-1}`,0],[`≥${pl+3*step}`,0]];
+  state.students.forEach(s=>{
+    const sc = scoreOf(s.no, gi, si);
+    if(sc==null) return;
+    if(sc<pl) bands[0][1]++;
+    else if(sc<pl+step) bands[1][1]++;
+    else if(sc<pl+2*step) bands[2][1]++;
+    else if(sc<pl+3*step) bands[3][1]++;
+    else bands[4][1]++;
+  });
+  const maxC = Math.max(...bands.map(b=>b[1]),1);
+  $("#gradeDist").innerHTML = bands.map(b=>`
+    <div class="col"><div class="cnt">${b[1]}</div>
+      <div class="bar ${b[1]===0?"zero":""}" style="height:${Math.round(b[1]/maxC*100)}%"></div>
+      <div class="lbl">${b[0]}</div></div>`).join("");
+  // 平均分趋势（动态场次）
+  const avgs = state.exams.map((_,g)=>statOf(g, si).avg);
+  const maxA = Math.max(...avgs,1);
+  $("#avgTrend").innerHTML = avgs.map((a,i)=>`
+    <div class="col"><div class="cnt">${a}</div>
+      <div class="bar" style="height:${Math.round(a/maxA*100)}%"></div>
+      <div class="lbl">${esc(state.exams[i].replace("考试",""))}</div></div>`).join("");
+  // 排名
+  const ranked = state.students.map(s=>({s, sc:scoreOf(s.no,gi,si)}))
+    .filter(x=>x.sc!=null).sort((a,b)=>b.sc-a.sc);
+  $("#gradeRank").innerHTML = ranked.map((r,rank)=>{
+    const s = r.s;
+    const lv = gradeLevel(r.sc, si);
+    const prev = gi>0 ? scoreOf(s.no, gi-1, si) : null;
+    const diff = prev==null?0:r.sc-prev;
+    const change = prev==null?`<span class="rank-change flat">—</span>`
+      :diff>0?`<span class="rank-change up">↑${diff}</span>`:diff<0?`<span class="rank-change down">↓${Math.abs(diff)}</span>`:`<span class="rank-change flat">—</span>`;
+    const spark = state.exams.map((_,g)=>scoreOf(s.no,g,si)).map(v=>`<i style="height:${v==null?2:Math.round(v/fullOf(si)*24)}px;${v==null?"background:#ddd":""}"></i>`).join("");
+    const weak = r.sc==null?"": r.sc<pl?`<span class="tag red">基础薄弱</span>`:r.sc<fullOf(si)*0.85?`<span class="tag amber">概念待加强</span>`:`<span class="tag green">掌握良好</span>`;
+    return `<tr>
+      <td><b class="mono">${rank+1}</b></td>
+      <td><span class="small-avatar ${s.g==="女"?"m":""}">${s.name[0]}</span><b>${s.name}</b></td>
+      <td><button class="btn btn-ghost btn-sm" data-grade="${s.no}" title="点击修改"><b class="mono" style="color:${lv[1]==="green"?"var(--good)":lv[1]==="red"?"var(--bad)":"var(--ink)"}">${r.sc}</b></button></td>
+      <td>${change}</td>
+      <td><div class="spark">${spark}</div></td>
+      <td><span class="tag ${lv[1]}">${lv[0]}</span></td>
+      <td>${weak}</td></tr>`;
+  }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:24px">暂无成绩数据</td></tr>`;
+}
+
+/* ===== 个人事务 ===== */
+function renderTasks(){
+  renderTodoList();
+  $("#todoCount").textContent = `${state.todos.filter(t=>!t.done).length} 项未完成`;
+  $("#teachResearch").innerHTML = state.research.map(r=>`
+    <div class="remind-item"><div class="ic" style="background:#e2ebf5;color:var(--info)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></div>
+    <div style="flex:1"><div style="font-weight:600">${esc(r.t)}</div><div style="font-size:12px;color:var(--muted)">${esc(r.d)} · ${esc(r.loc)}</div></div>
+    <button class="btn btn-ghost btn-sm" data-edit="research:${r.id}">编辑</button>
+    <button class="btn btn-ghost btn-sm" data-del="research:${r.id}" style="color:var(--bad)">删</button></div>`).join("") || `<div style="font-size:13px;color:var(--muted);padding:6px 0">暂无教研活动</div>`;
+  $("#titleChecklist").innerHTML = TITLE_ITEMS.map(it=>`
+    <div class="item"><span class="dot" style="background:${it.v===100?"var(--good)":it.v>0?"var(--warn)":"var(--line)"}"></span>
+      <div style="width:150px;font-weight:600;font-size:13.5px">${it.k}</div>
+      <div class="bar"><i style="width:${it.v}%"></i></div>
+      <div class="pct">${it.v}%</div></div>`).join("");
+  $("#deadlineList").innerHTML = DEADLINES.map(d=>`
+    <div class="remind-item"><div class="ic" style="background:${d.c==="red"?"#f6e0dc":d.c==="amber"?"#f7ecd6":"#ece9e0"};color:${d.c==="red"?"var(--bad)":d.c==="amber"?"var(--warn)":"var(--muted)"}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+    <div><div style="font-weight:600">${esc(d.t)}</div><div style="font-size:12px;color:var(--muted)">${esc(d.d)}</div></div></div>`).join("");
+}
+function renderTodoList(){
+  const list = state.todos;
+  $("#todoList").innerHTML = list.map(t=>`
+    <div class="todo-row ${t.done?"done":""}" data-id="${t.id}">
+      <div class="ck" data-act="toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="tt">${esc(t.tt)}</div>
+      <span class="tag ${t.pri==="高"?"red":t.pri==="中"?"amber":"gray"}">${t.pri}</span>
+      <span class="due">${esc(t.due)}</span>
+      <button class="del" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+    </div>`).join("") || `<div style="padding:16px;text-align:center;color:var(--faint);font-size:13.5px">暂无待办</div>`;
+}
+
+/* ===== 座位 ===== */
+let seatSelected = null;
+function renderSeating(){
+  $("#seatRows").value = state.seating.rows;
+  $("#seatCols").value = state.seating.cols;
+  $("#seatGrid").style.gridTemplateColumns = `repeat(${state.seating.cols},1fr)`;
+  const cells = state.seating.cells;
+  const si = state.subjectIdx;
+  const curName = si===-1 ? "总分" : (state.subjects[si]||{name:""}).name;
+  // 科目选择器（本地化：不改变全局 subjectIdx 查看逻辑）
+  const seatSel = $("#seatSubjectSel");
+  if(seatSel && seatSel.options.length !== state.subjects.length+1){
+    const opts = state.subjects.map((s,i)=>`<option value="${i}">${s.name}（满分${s.full}）</option>`).join("")
+      + `<option value="-1">总分（各科合计）</option>`;
+    seatSel.innerHTML = opts;
+  }
+  if(seatSel && seatSel.value !== String(si)) seatSel.value = String(si);
+  const eh = $("#seatExamHint");
+  if(eh) eh.textContent = (state.exams[state.gradeIdx]||"本场考试") + " · " + curName + "成绩";
+  const board = $("#seatBoard");
+  if(board) board.textContent = state.settings.className + " · 教室座位图（" + (state.exams[state.gradeIdx]||"") + " · " + curName + "）";
+  $("#seatGrid").innerHTML = cells.map((cell,i)=>{
+    if(!cell) return `<div class="seat empty" data-i="${i}"><span class="nm">空位</span></div>`;
+    const sel = seatSelected===i;
+    const locked = !!cell.locked;
+    const sc = scoreOf(cell.no, state.gradeIdx, si);
+    const stu = state.students.find(x=>x.no===cell.no);
+    const g = stu && (stu.g||"");
+    const gCls = g==="女"?"f":(g==="男"?"m":"");
+    return `<div class="seat occupied${sel?" selected":""}${locked?" locked":""}" data-i="${i}">
+      ${locked?`<span class="lock-ic">🔒</span>`:""}
+      <span class="seat-no">${cell.no}</span>
+      ${gCls?`<span class="seat-g ${gCls}">${g}</span>`:""}
+      <span class="nm">${cell.name}</span>
+      <span class="seat-score${sc==null?" none":""}">${sc==null?"—":sc}</span></div>`;
+  }).join("");
+}
+function rebuildSeating(rows, cols){
+  const n = rows*cols;
+  const cells = new Array(n).fill(null);
+  state.students.forEach((s,i)=>{ if(i<n) cells[i]={no:s.no,name:s.name, locked:false}; });
+  state.seating = {rows, cols, cells};
+}
+function exportSeating(){
+  const cells = state.seating.cells;
+  const rows = state.seating.rows, cols = state.seating.cols;
+  // 按教室实际布局导出为矩阵（每格 = 对应座位的姓名，空位留空）
+  const aoa = [];
+  for(let r=0;r<rows;r++){
+    const line = [];
+    for(let c=0;c<cols;c++){
+      const cell = cells[r*cols+c];
+      line.push(cell ? cell.name : "");
+    }
+    aoa.push(line);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = Array(cols).fill({wch:14});
+  ws["!rows"] = Array.from({length:rows}, ()=>({hpt:28}));
+  if(ws["!ref"]){
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for(let R=range.s.r; R<=range.e.r; R++){
+      for(let C=range.s.c; C<=range.e.c; C++){
+        const cell = ws[XLSX.utils.encode_cell({r:R,c:C})];
+        if(cell && cell.v){ cell.s = {alignment:{vertical:"center",horizontal:"center"}}; }
+      }
+    }
+  }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "座位表");
+  XLSX.writeFile(wb, `座位表_${state.settings.className}.xlsx`);
+  toast(`座位表已导出（.xlsx，按 ${rows}行×${cols}列 布局排列）`);
+}
+function trySwap(selIdx, targetIdx){
+  const cells = state.seating.cells;
+  const a = cells[selIdx], b = cells[targetIdx];
+  if(a && a.locked){ toast("已锁定的座位不能移动"); seatSelected=null; renderSeating(); return; }
+  if(b && b.locked){ toast("目标座位已锁定"); seatSelected=null; renderSeating(); return; }
+  cells[selIdx] = b; cells[targetIdx] = a;
+  seatSelected = null;
+  renderSeating(); saveState(); toast("座位已对调");
+}
+function moveToEmpty(selIdx, targetIdx){
+  const cells = state.seating.cells;
+  const a = cells[selIdx];
+  if(a && a.locked){ toast("已锁定的座位不能移动"); seatSelected=null; renderSeating(); return; }
+  cells[targetIdx] = a; cells[selIdx] = null;
+  seatSelected = null;
+  renderSeating(); saveState(); toast("已移动至空位");
+}
+function toggleSeatLock(i){
+  const cell = state.seating.cells[i];
+  if(!cell){ toast("空位无需锁定"); return; }
+  cell.locked = !cell.locked;
+  seatSelected = null;
+  saveState(); renderSeating(); toast(cell.locked?`已锁定 ${cell.name} 的座位`:`已解锁 ${cell.name} 的座位`);
+}
+
+/* =========================================================
+   事件绑定
+========================================================= */
+function bindEvents(){
+  $("#burger").addEventListener("click", ()=>{ $("#sidebar").classList.add("open"); $("#mask").classList.add("show"); });
+  $("#mask").addEventListener("click", closeSidebar);
+  document.addEventListener("click", e=>{
+    const g = e.target.closest("[data-goto]");
+    if(g) location.hash = "#/"+g.dataset.goto;
+  });
+
+  /* 设置 */
+  let subjDraft = [];
+  function renderSubjManager(){
+    $("#subjManager").innerHTML = subjDraft.map((x,i)=>`
+      <div class="subj-row">
+        <input type="text" value="${esc(x.name)}" data-k="name" data-i="${i}" placeholder="科目名">
+        <input type="number" value="${x.full}" data-k="full" data-i="${i}" min="1" placeholder="满分">
+        <span class="x-btn" data-rm="${i}">×</span>
+      </div>`).join("");
+  }
+  let slotDraft = [];
+  function renderSlotManager(){
+    $("#slotManager").innerHTML = slotDraft.map((x,i)=>`
+      <div class="subj-row">
+        <input type="text" value="${esc(x.t)}" data-k="t" data-i="${i}" placeholder="名称，如：午托">
+        <input type="text" value="${esc(x.time)}" data-k="time" data-i="${i}" placeholder="时间，如：11:40-12:30">
+        <span class="x-btn" data-rm="${i}">×</span>
+      </div>`).join("");
+  }
+  $("#btnSettings").addEventListener("click", ()=>{
+    const s = state.settings;
+    $("#setClassName").value = s.className;
+    $("#setTeacher").value = s.teacher;
+    $("#setSubject").value = s.subject;
+    $("#setTerm").value = s.term;
+    $("#setTermStart").value = s.termStart || "2026-09-01";
+    $("#setRows").value = s.rows;
+    $("#setCols").value = s.cols;
+    $("#setPassRate").value = s.passRate ?? 60;
+    subjDraft = JSON.parse(JSON.stringify(state.subjects));
+    renderSubjManager();
+    slotDraft = JSON.parse(JSON.stringify(state.slots||[]));
+    renderSlotManager();
+    $("#settingsModal").classList.add("show");
+  });
+  $("#slotManager").addEventListener("input", e=>{
+    const el = e.target.closest("[data-i]");
+    if(!el) return;
+    const i = +el.dataset.i, k = el.dataset.k;
+    slotDraft[i][k] = el.value;
+  });
+  $("#slotManager").addEventListener("click", e=>{
+    const rm = e.target.closest("[data-rm]");
+    if(rm){ slotDraft.splice(+rm.dataset.rm,1); renderSlotManager(); }
+  });
+  $("#btnAddSlot").addEventListener("click", ()=>{
+    slotDraft.push({t:"午托"+(slotDraft.length+1), time:"12:00-13:00"});
+    renderSlotManager();
+  });
+  $("#subjManager").addEventListener("input", e=>{
+    const el = e.target.closest("[data-i]");
+    if(!el) return;
+    const i = +el.dataset.i, k = el.dataset.k;
+    if(k==="full"){ subjDraft[i].full = parseInt(el.value)||100; }
+    else subjDraft[i].name = el.value;
+  });
+  $("#subjManager").addEventListener("click", e=>{
+    const rm = e.target.closest("[data-rm]");
+    if(rm){ subjDraft.splice(+rm.dataset.rm,1); renderSubjManager(); }
+  });
+  $("#btnAddSubj").addEventListener("click", ()=>{
+    subjDraft.push({name:"新科目"+(subjDraft.length+1), full:100});
+    renderSubjManager();
+  });
+  $("#settingsCancel").addEventListener("click", ()=>$("#settingsModal").classList.remove("show"));
+  $("#settingsModal").addEventListener("click", e=>{ if(e.target.id==="settingsModal") $("#settingsModal").classList.remove("show"); });
+  $("#settingsSave").addEventListener("click", ()=>{
+    try{
+      const s = state.settings;
+      s.className = $("#setClassName").value.trim() || s.className;
+      s.teacher = $("#setTeacher").value.trim() || s.teacher;
+      s.subject = $("#setSubject").value.trim() || s.subject;
+      s.term = $("#setTerm").value.trim() || s.term;
+      const ts = $("#setTermStart").value;
+      if(ts) s.termStart = ts;
+      s.rows = Math.min(12, Math.max(1, parseInt($("#setRows").value)||5));
+      s.cols = Math.min(12, Math.max(1, parseInt($("#setCols").value)||8));
+      s.passRate = parseFloat($("#setPassRate").value);
+      if(isNaN(s.passRate) || s.passRate<=0) s.passRate = 60;
+      // 更新科目
+      const valid = subjDraft.map(x=>({name:(x.name||"").trim()||"科目", full:Math.max(1, +x.full||100)})).filter(x=>x.name);
+      if(!valid.length){ toast("至少保留一个科目"); return; }
+      const oldSubj = state.subjects;
+      state.subjects = valid;
+      // 若当前科目下标越界则复位
+      if(state.subjectIdx>=valid.length) state.subjectIdx = valid.length-1;
+      // 迁移成绩：保留同名科目的成绩，为新科目建空结构
+      const oldNames = oldSubj.map(x=>x.name);
+      state.scores.forEach(g=>{
+        if(!g || typeof g!=="object") return;
+        const ng = {};
+        valid.forEach(sj=>{
+          ng[sj.name] = (oldNames.includes(sj.name) && g[sj.name]) ? g[sj.name] : (g[sj.name]||{});
+        });
+        Object.assign(g, ng);
+        Object.keys(g).forEach(k=>{ if(!valid.some(sj=>sj.name===k)) delete g[k]; });
+      });
+      // 若座位行列与设置不符，同步默认布局
+      if(state.seating && (state.seating.rows!==s.rows || state.seating.cols!==s.cols)){
+        rebuildSeating(s.rows, s.cols);
+      }
+      // 更新课表时间段，并迁移各班级课表列数
+      const validSlots = slotDraft.map(x=>({t:(x.t||"").trim()||"节次", time:(x.time||"").trim()}));
+      if(!validSlots.length){ toast("至少保留一个时间段"); return; }
+      const oldSlotN = state.slots ? state.slots.length : 7;
+      state.slots = validSlots;
+      const newSlotN = validSlots.length;
+      if(oldSlotN!==newSlotN){
+        Object.keys(state.schedule).forEach(k=>{
+          const sched = state.schedule[k];
+          if(!Array.isArray(sched)) return;
+          sched.forEach((row,di)=>{
+            if(!Array.isArray(row)){ sched[di] = Array(newSlotN).fill("自习"); return; }
+            if(row.length < newSlotN){ while(row.length<newSlotN) row.push("自习"); }
+            else if(row.length > newSlotN){ sched[di] = row.slice(0,newSlotN); }
+          });
+        });
+      }
+      saveState();
+      // 数据已保存：先关闭弹窗并提示成功，界面刷新单独处理
+      $("#settingsModal").classList.remove("show");
+      toast("设置已保存");
+      try{
+        render();
+      }catch(re){
+        console.error("render after settings save:", re);
+        toast("已保存，但界面刷新出错："+re.message);
+      }
+    }catch(err){
+      console.error("settings save error:", err);
+      toast("保存失败："+err.message);
+    }
+  });
+
+  /* 课表 */
+  $("#schedSeg").addEventListener("click", e=>{
+    const b = e.target.closest("[data-v]");
+    if(b){ state.schedView = b.dataset.v; saveState(); renderSchedule(); }
+  });
+  $("#btnAddClass").addEventListener("click", ()=>{
+    const name = prompt("输入新班级编号/名称（如 5）：","5");
+    if(!name || !name.trim()) return;
+    const key = String(name).trim();
+    if(state.schedule[key]){ toast("该班级已存在"); return; }
+    state.schedule[key] = DAYS.map(()=>state.slots.map(()=>"自习"));
+    state.room[key] = "";
+    state.schedView = key;
+    saveState(); renderSchedule(); toast("已添加班级 "+key);
+  });
+  $("#btnDelClass").addEventListener("click", ()=>{
+    const keys = Object.keys(state.schedule);
+    if(keys.length<=1){ toast("至少保留一个班级"); return; }
+    const key = state.schedView;
+    if(!confirm(`确定删除「班级 ${key}」的课表吗？`)) return;
+    delete state.schedule[key];
+    delete state.room[key];
+    state.schedView = Object.keys(state.schedule)[0];
+    saveState(); renderSchedule(); toast("已删除班级 "+key);
+  });
+  $("#prevWeek").addEventListener("click", ()=>{ state.weekOffset--; saveState(); renderSchedule(); });
+  $("#nextWeek").addEventListener("click", ()=>{ state.weekOffset++; saveState(); renderSchedule(); });
+  $("#scheduleGrid").addEventListener("click", e=>{
+    const cell = e.target.closest(".sched-cell");
+    if(cell) openCell(+cell.dataset.d, +cell.dataset.s);
+  });
+  $("#swapLog").addEventListener("click", e=>{
+    const del = e.target.closest("[data-del]");
+    if(del){
+      const id = +del.dataset.del;
+      state.swapLogs = state.swapLogs.filter(x=>x.id!==id);
+      saveState(); renderSchedule(); toast("已删除");
+    }
+  });
+  $("#cellCancel").addEventListener("click", ()=>$("#cellModal").classList.remove("show"));
+  $("#cellModal").addEventListener("click", e=>{ if(e.target.id==="cellModal") $("#cellModal").classList.remove("show"); });
+  $("#cellSave").addEventListener("click", ()=>{
+    const cls = state.schedView;
+    state.schedule[cls][cellPos.d][cellPos.s] = $("#cellSubject").value;
+    if($("#cellSubject").value===state.settings.subject){
+      state.room[cls] = $("#cellRoom").value.trim() || state.room[cls];
+    }
+    saveState(); renderSchedule(); $("#cellModal").classList.remove("show"); toast("课程已更新");
+  });
+  $("#cellDelete").addEventListener("click", ()=>{
+    const cls = state.schedView;
+    state.schedule[cls][cellPos.d][cellPos.s] = "自习";
+    saveState(); renderSchedule(); $("#cellModal").classList.remove("show"); toast("已清空该格");
+  });
+  $("#btnSwap").addEventListener("click", openSwap);
+  $("#btnSchedImport").addEventListener("click", ()=>openImport("schedule"));
+  $("#btnSchedTpl").addEventListener("click", ()=>{
+    const header = ["星期"].concat(state.slots.map(s=>s.t));
+    const cls = state.schedView;
+    const rows = DAYS.map((d,i)=>[DAYS[i]].concat(state.schedule[cls][i]));
+    downloadXlsx(`课表模板_${state.settings.className}.xlsx`, header, rows);
+    toast("课表模板已下载（.xlsx）");
+  });
+
+  /* 班级 */
+  $("#stuSearch").addEventListener("input", e=>renderStuTable(e.target.value));
+  $$("#classTabs button").forEach(b=>b.addEventListener("click", ()=>{
+    classTab = b.dataset.tab;
+    $$("#classTabs button").forEach(x=>x.classList.toggle("on",x===b));
+    $$(".pane[data-pane]").forEach(p=>p.classList.toggle("on",p.dataset.pane===classTab));
+  }));
+  $("#btnAddStu").addEventListener("click", ()=>{ openStuModal(null); });
+  $("#stuTable").addEventListener("click", e=>{
+    const ed = e.target.closest("[data-edit]");
+    const del = e.target.closest("[data-del]");
+    const gr = e.target.closest("[data-grade]");
+    if(ed){ const s = state.students.find(x=>x.no===ed.dataset.edit); if(s) openStuModal(s); }
+    if(gr){ openGradeModal(gr.dataset.grade); }
+    if(del){
+      if(!confirm("确定删除该学生？其成绩记录仍保留，可通过学号重新导入。")) return;
+      state.students = state.students.filter(x=>x.no!==del.dataset.del);
+      // 清理座位
+      state.seating.cells = state.seating.cells.map(c=>c&&c.no===del.dataset.del?null:c);
+      saveState(); renderClass(); renderSeating(); toast("已删除学生");
+    }
+  });
+  $("#btnStuImport").addEventListener("click", ()=>openImport("students"));
+  $("#btnStuTpl").addEventListener("click", ()=>{
+    downloadXlsx("学生名单导入模板.xlsx",
+      ["学号","姓名","性别","成绩","标签","备注"],
+      [["01","张三","男",88,"重点跟进","物理课代表，责任心强"],
+       ["02","李四","女",75,"课代表;视力保护","坐前排"],
+       ["03","王五","男",92,"","重点关注对象"]]);
+    toast("名单模板已下载（.xlsx）");
+  });
+  $("#btnStuExport").addEventListener("click", ()=>{
+    const header = ["学号","姓名","性别","成绩","标签","备注"];
+    const rows = state.students.map(s=>[s.no,s.name,s.g||"",scoreOf(s.no,state.gradeIdx)??"",(s.tags||[]).join(";"),s.note||""]);
+    downloadXlsx(`学生名单_${state.settings.className}.xlsx`, header, rows);
+    toast("名单已导出（.xlsx）");
+  });
+  $("#btnStuClear").addEventListener("click", ()=>{
+    if(!confirm("确定一键清空学生名单吗？座位将同步清空，成绩记录仍保留（按学号关联）。")) return;
+    state.students = [];
+    state.seating.cells = new Array(state.seating.rows*state.seating.cols).fill(null);
+    saveState(); renderClass(); renderSeating(); toast("名单已清空");
+  });
+  $("#btnAddLog").addEventListener("click", ()=>openRec("log"));
+
+  /* 记录类：考勤/违纪/日志/家校/教研 统一增删改 */
+  // 各类型的字段定义（type -> {title, hint, fields:[{k,label,type}]}）
+  const REC = {
+    attend:{ title:"考勤记录", hint:"记录学生今日出勤异常情况", fields:[
+        {k:"no", label:"学号", type:"text", ph:"如 05"},
+        {k:"st", label:"状态", type:"select", opts:["请假","迟到","缺勤","早退"]},
+        {k:"reason", label:"原因/说明", type:"text", ph:"如：感冒发烧，医院就诊"}
+      ]},
+    disc:{ title:"违纪记录", hint:"记录班级违纪情况与处理结果", fields:[
+        {k:"d", label:"日期", type:"text", ph:"如 9.30"},
+        {k:"s", label:"学生", type:"text", ph:"学生姓名"},
+        {k:"t", label:"违纪事项", type:"text", ph:"如：上课玩手机"},
+        {k:"h", label:"处理结果", type:"text", ph:"如：已没收并通知家长"}
+      ]},
+    log:{ title:"班务日志", hint:"记录班级事务与安排", fields:[
+        {k:"d", label:"日期", type:"text", ph:"如 26"},
+        {k:"m", label:"月份", type:"text", ph:"如 9月"},
+        {k:"t", label:"标题", type:"text", ph:"如：运动会报名"},
+        {k:"ds", label:"内容", type:"textarea", ph:"记录详情…"}
+      ]},
+    contact:{ title:"家校沟通", hint:"记录与家长的沟通情况", fields:[
+        {k:"d", label:"日期", type:"text", ph:"如 9.26"},
+        {k:"s", label:"学生", type:"text", ph:"学生姓名"},
+        {k:"m", label:"沟通内容", type:"textarea", ph:"沟通要点、家长反馈…"}
+      ]},
+    research:{ title:"教研活动", hint:"记录教研活动安排与参与", fields:[
+        {k:"d", label:"时间", type:"text", ph:"如 周四 15:00"},
+        {k:"t", label:"主题", type:"text", ph:"活动主题"},
+        {k:"loc", label:"地点", type:"text", ph:"活动地点"}
+      ]}
+  };
+  let recCtx = {type:null, id:null, arr:null};
+  function recArr(t){ return {attend:state.attend, disc:state.discipline, log:state.logs, contact:state.contacts, research:state.research}[t]; }
+  function openRec(type, id){
+    const cfg = REC[type]; if(!cfg) return;
+    recCtx = {type, id: id??null, arr: recArr(type)};
+    $("#recTitle").textContent = id!=null ? "编辑记录" : "添加记录";
+    $("#recHint").textContent = cfg.hint;
+    const cur = id!=null ? recCtx.arr.find(x=>x.id===id) : null;
+    $("#recFields").innerHTML = cfg.fields.map(f=>{
+      const v = cur ? (cur[f.k]??"") : "";
+      if(f.type==="select"){
+        const opts = f.opts.map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("");
+        return `<label>${f.label}</label><select data-f="${f.k}">${opts}</select>`;
+      }
+      if(f.type==="textarea"){
+        return `<label>${f.label}</label><textarea data-f="${f.k}" rows="2" placeholder="${f.ph||""}">${esc(v)}</textarea>`;
+      }
+      return `<label>${f.label}</label><input data-f="${f.k}" type="text" value="${esc(v)}" placeholder="${f.ph||""}">`;
+    }).join("");
+    $("#recModal").classList.add("show");
+    // 考勤时自动填入第一个未记录的学生学号
+    if(type==="attend" && !id && !cur){
+      const done = new Set(state.attend.map(a=>a.no));
+      const first = state.students.find(x=>!done.has(x.no));
+      if(first) $('[data-f="no"]').value = first.no;
+    }
+  }
+  $("#btnAddAttend").addEventListener("click", ()=>openRec("attend"));
+  $("#btnAddDisc").addEventListener("click", ()=>openRec("disc"));
+  $("#btnAddContact").addEventListener("click", ()=>openRec("contact"));
+  $("#btnAddResearch").addEventListener("click", ()=>openRec("research"));
+  $("#recCancel").addEventListener("click", ()=>$("#recModal").classList.remove("show"));
+  $("#recModal").addEventListener("click", e=>{ if(e.target.id==="recModal") $("#recModal").classList.remove("show"); });
+  $("#recSave").addEventListener("click", ()=>{
+    const cfg = REC[recCtx.type]; if(!cfg) return;
+    const obj = {};
+    cfg.fields.forEach(f=>{
+      const el = $(`[data-f="${f.k}"]`);
+      obj[f.k] = el ? el.value.trim() : "";
+    });
+    if(recCtx.id!=null){
+      const target = recCtx.arr.find(x=>x.id===recCtx.id);
+      if(target) Object.assign(target, obj);
+      toast("记录已更新");
+    } else {
+      const maxId = recCtx.arr.reduce((m,x)=>Math.max(m, x.id||0), 0);
+      recCtx.arr.unshift({id: maxId+1, ...obj});
+      toast("记录已添加");
+    }
+    saveState();
+    if(recCtx.type==="attend") renderAttend();
+    else if(recCtx.type==="disc") renderDiscipline();
+    else if(recCtx.type==="log") renderLogs();
+    else if(recCtx.type==="contact") renderContacts();
+    else if(recCtx.type==="research") renderTasks();
+    $("#recModal").classList.remove("show");
+  });
+  // 列表内的编辑/删除委托（各记录列表）
+  [["attendList","attend"],["disciplineList","disc"],["logList","log"],["contactList","contact"],["teachResearch","research"]].forEach(([listId,type])=>{
+    const el = document.getElementById(listId);
+    if(!el) return;
+    el.addEventListener("click", e=>{
+      const ed = e.target.closest("[data-edit]");
+      const del = e.target.closest("[data-del]");
+      if(ed){ const id = +ed.dataset.edit.split(":")[1]; openRec(type, id); }
+      if(del){
+        const id = +del.dataset.del.split(":")[1];
+        recArr(type).splice(recArr(type).findIndex(x=>x.id===id),1);
+        saveState();
+        if(type==="attend") renderAttend();
+        else if(type==="disc") renderDiscipline();
+        else if(type==="log") renderLogs();
+        else if(type==="contact") renderContacts();
+        else if(type==="research") renderTasks();
+        toast("已删除");
+      }
+    });
+  });
+
+  /* 成绩 */
+  $("#subjSeg").addEventListener("click", e=>{
+    const b = e.target.closest("[data-s]");
+    if(b){ state.subjectIdx = parseInt(b.dataset.s); saveState(); renderGrades(); }
+  });
+  // 考试 seg 事件委托（动态渲染）
+  $("#gradeSeg").addEventListener("click", e=>{
+    const b = e.target.closest("[data-g]");
+    if(b){ state.gradeIdx = +b.dataset.g; saveState(); renderGrades(); }
+  });
+  $("#btnAddExam").addEventListener("click", ()=>{
+    state.exams.push("第"+(state.exams.length+1)+"次考试");
+    state.scores.push({});
+    state.gradeIdx = state.exams.length-1;
+    saveState(); renderGrades(); toast("已添加考试");
+  });
+  $("#btnRenameExam").addEventListener("click", ()=>{
+    const name = prompt("修改当前考试名称：", state.exams[state.gradeIdx]||"");
+    if(name && name.trim()){
+      state.exams[state.gradeIdx] = name.trim();
+      saveState(); renderGrades(); toast("考试已改名");
+    }
+  });
+  $("#btnDelExam").addEventListener("click", ()=>{
+    if(state.exams.length<=1){ toast("至少保留一场考试"); return; }
+    if(!confirm(`确定删除「${state.exams[state.gradeIdx]}」？该场成绩将一并删除。`)) return;
+    state.exams.splice(state.gradeIdx,1);
+    state.scores.splice(state.gradeIdx,1);
+    if(state.gradeIdx>=state.exams.length) state.gradeIdx = state.exams.length-1;
+    saveState(); renderGrades(); toast("已删除本场考试");
+  });
+  $("#gradeRank").addEventListener("click", e=>{
+    const g = e.target.closest("[data-grade]");
+    if(g) openGradeModal(g.dataset.grade);
+  });
+  $("#btnGradeImport").addEventListener("click", ()=>openImport("grades"));
+  $("#btnGradeTpl").addEventListener("click", ()=>{
+    const head = ["学号"].concat(state.subjects.map(s=>s.name));
+    const ex = ["01"].concat(state.subjects.map(s=>Math.round(s.full*0.8)));
+    downloadXlsx("成绩导入模板.xlsx", head, [ex]);
+    toast("成绩模板已下载（.xlsx）");
+  });
+
+  /* 待办 */
+  $("#btnAddTodo").addEventListener("click", addTodo);
+  $("#todoInput").addEventListener("keydown", e=>{ if(e.key==="Enter") addTodo(); });
+  $("#todoList").addEventListener("click", e=>{
+    const row = e.target.closest(".todo-row"); if(!row) return;
+    const id = +row.dataset.id;
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    const t = state.todos.find(x=>x.id===id); if(!t) return;
+    if(act==="toggle") t.done = !t.done;
+    else if(act==="del"){ state.todos = state.todos.filter(x=>x.id!==id); }
+    saveState(); renderTodoList();
+    $("#todoCount").textContent = `${state.todos.filter(x=>!x.done).length} 项未完成`;
+    if(act==="del") toast("已删除");
+  });
+
+  /* 座位 */
+  $("#seatSubjectSel").addEventListener("change", e=>{
+    state.subjectIdx = parseInt(e.target.value)||-1;
+    saveState(); renderSeating();
+  });
+  $("#seatApply").addEventListener("click", ()=>{
+    const rows = Math.min(12, Math.max(1, parseInt($("#seatRows").value)||1));
+    const cols = Math.min(12, Math.max(1, parseInt($("#seatCols").value)||1));
+    rebuildSeating(rows, cols);
+    state.settings.rows = rows; state.settings.cols = cols;
+    saveState(); renderSeating(); toast("布局已应用");
+  });
+  $("#seatAuto").addEventListener("click", ()=>{
+    const strategy = $("#seatStrategy").value;
+    autoSeat(strategy);
+  });
+  $("#seatLockSel").addEventListener("click", ()=>{
+    if(seatSelected===null){ toast("请先点击一名学生"); return; }
+    toggleSeatLock(seatSelected);
+  });
+  $("#seatClearLock").addEventListener("click", ()=>{
+    if(!confirm("确定清除全部座位锁定吗？")) return;
+    state.seating.cells.forEach(c=>{ if(c) c.locked = false; });
+    saveState(); renderSeating(); toast("已清除全部锁定");
+  });
+  $("#seatGrid").addEventListener("click", e=>{
+    const seat = e.target.closest(".seat"); if(!seat) return;
+    const i = +seat.dataset.i;
+    if(seatSelected===null){
+      if(!state.seating.cells[i]){ toast("该位置为空，请先选择一名学生"); return; }
+      seatSelected = i; renderSeating();
+    } else {
+      if(seatSelected===i){ seatSelected=null; renderSeating(); return; }
+      if(!state.seating.cells[i]){ moveToEmpty(seatSelected, i); return; }
+      trySwap(seatSelected, i);
+    }
+  });
+  $("#seatSave").addEventListener("click", ()=>{ saveState(); toast("座位布局已保存"); });
+  $("#seatExport").addEventListener("click", exportSeating);
+  $("#seatReset").addEventListener("click", ()=>{
+    rebuildSeating(state.settings.rows, state.settings.cols);
+    seatSelected=null; saveState(); renderSeating(); toast("已恢复默认布局");
+  });
+}
+
+/* ===== 学生编辑 ===== */
+let editingStu = null;
+let stuTags = [];
+const STU_PRESET_TAGS = ["班干部","课代表","重点关注","视力保护","需家访","进步明显","体委","劳动委员","语文","数学","英语","物理","化学","生物","历史","地理","道德与法治","音乐","美术","体育","信息技术","优等生","后进生","住宿生","走读生"];
+function renderStuTagList(){
+  $("#stuTagList").innerHTML = stuTags.map((t,i)=>`
+    <span class="tag-chip"><b>${esc(t)}</b><span class="x" data-tag="${i}">×</span></span>`).join("");
+  // 同步预设标签选中态
+  $$("#stuPresetTags .pt").forEach(el=>{
+    el.classList.toggle("on", stuTags.includes(el.dataset.pt));
+  });
+}
+function renderStuPreset(){
+  $("#stuPresetTags").innerHTML = STU_PRESET_TAGS.map(t=>`
+    <span class="pt" data-pt="${esc(t)}">${esc(t)}</span>`).join("");
+}
+$("#stuPresetTags").addEventListener("click", e=>{
+  const pt = e.target.closest(".pt");
+  if(!pt) return;
+  const t = pt.dataset.pt;
+  const i = stuTags.indexOf(t);
+  if(i>=0) stuTags.splice(i,1); else stuTags.push(t);
+  renderStuTagList();
+});
+function openStuModal(s){
+  editingStu = s || null;
+  $("#stuModalTitle").textContent = s ? "编辑学生档案" : "新增学生";
+  $("#stuNo").value = s ? s.no : "";
+  $("#stuName").value = s ? s.name : "";
+  $("#stuGender").value = s ? s.g : "男";
+  $("#stuPhone").value = s ? s.phone : "";
+  $("#stuNote").value = s ? s.note : "";
+  $("#stuScore").value = s ? (scoreOf(s.no, state.gradeIdx, state.subjectIdx)??"") : "";
+  stuTags = s && Array.isArray(s.tags) ? s.tags.slice() : [];
+  renderStuPreset();
+  renderStuTagList();
+  $("#stuTagInput").value = "";
+  $("#stuModal").classList.add("show");
+}
+$("#stuCancel").addEventListener("click", ()=>$("#stuModal").classList.remove("show"));
+$("#stuModal").addEventListener("click", e=>{ if(e.target.id==="stuModal") $("#stuModal").classList.remove("show"); });
+$("#stuTagAdd").addEventListener("click", ()=>{
+  const v = $("#stuTagInput").value.trim();
+  if(!v) return;
+  v.split(/[,，、;；\s]+/).filter(Boolean).forEach(t=>{
+    if(!stuTags.includes(t)) stuTags.push(t);
+  });
+  $("#stuTagInput").value = "";
+  renderStuTagList();
+});
+$("#stuTagInput").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#stuTagAdd").click(); } });
+$("#stuTagList").addEventListener("click", e=>{
+  const x = e.target.closest("[data-tag]");
+  if(x) stuTags.splice(+x.dataset.tag,1), renderStuTagList();
+});
+$("#stuSave").addEventListener("click", ()=>{
+  const no = $("#stuNo").value.trim();
+  const name = $("#stuName").value.trim();
+  if(!no||!name){ toast("学号和姓名不能为空"); return; }
+  const data = {no, name, g:$("#stuGender").value,
+    phone:$("#stuPhone").value.trim(), note:$("#stuNote").value.trim(),
+    tags: stuTags.slice()};
+  if(editingStu){
+    Object.assign(editingStu, data);
+    toast("档案已更新");
+  } else {
+    if(state.students.some(x=>x.no===no)){ toast("该学号已存在"); return; }
+    state.students.push(data);
+    // 座位补位
+    const cells = state.seating.cells;
+    const emptyIdx = cells.findIndex(c=>!c);
+    if(emptyIdx>=0) cells[emptyIdx] = {no,name}; else cells.push({no,name});
+    state.seating.cells = cells;
+    toast("学生已添加");
+  }
+  // 保存成绩（当前考试 + 当前科目）
+  const sv = $("#stuScore").value;
+  const si = state.subjectIdx;
+  const subjName = si===-1 ? null : state.subjects[si].name;
+  if(si!==-1){
+    if(!state.scores[state.gradeIdx][subjName]) state.scores[state.gradeIdx][subjName] = {};
+    if(sv===""){ delete state.scores[state.gradeIdx][subjName][no]; }
+    else {
+      const n = parseFloat(sv);
+      if(!isNaN(n)) state.scores[state.gradeIdx][subjName][no] = n;
+    }
+  }
+  saveState(); renderClass(); renderSeating(); $("#stuModal").classList.remove("show");
+});
+
+/* ===== 成绩编辑 ===== */
+let editingGradeNo = null;
+function openGradeModal(no){
+  editingGradeNo = no;
+  const s = state.students.find(x=>x.no===no);
+  const cur = scoreOf(no, state.gradeIdx, state.subjectIdx);
+  const nm = state.subjectIdx===-1 ? "总分" : state.subjects[state.subjectIdx].name;
+  $("#gradeModalTitle").textContent = `修改 ${nm}成绩 · ${s?s.name:no}`;
+  $("#gradeInput").value = cur==null?"":cur;
+  $("#gradeModal").classList.add("show");
+}
+$("#gradeCancel").addEventListener("click", ()=>$("#gradeModal").classList.remove("show"));
+$("#gradeModal").addEventListener("click", e=>{ if(e.target.id==="gradeModal") $("#gradeModal").classList.remove("show"); });
+$("#gradeSave").addEventListener("click", ()=>{
+  const v = $("#gradeInput").value;
+  const gi = state.gradeIdx, si = state.subjectIdx;
+  if(v===""){
+    if(si===-1){ toast("总分由各科自动合计，请改各科成绩"); return; }
+    delete state.scores[gi][state.subjects[si].name][editingGradeNo];
+  }
+  else {
+    const n = parseFloat(v);
+    if(isNaN(n)){ toast("请输入有效数字"); return; }
+    if(si===-1){ toast("总分由各科自动合计，请改各科成绩"); return; }
+    state.scores[gi][state.subjects[si].name][editingGradeNo] = n;
+  }
+  saveState(); renderGrades(); $("#gradeModal").classList.remove("show"); toast("成绩已保存");
+});
+
+/* ===== 调课 ===== */
+function openSwap(){
+  const cls = state.schedView;
+  const sched = state.schedule[cls];
+  let opts = "";
+  for(let d=0;d<5;d++) for(let s=0;s<state.slots.length;s++){
+    if(sched[d][s]===state.settings.subject)
+      opts += `<option value="${d}-${s}">${DAYS[d]} ${state.slots[s].t} · ${state.settings.className}</option>`;
+  }
+  if(!opts){ toast("当前班级课表中没有我的课"); return; }
+  const mask = document.createElement("div");
+  mask.className = "modal-mask show";
+  mask.innerHTML = `<div class="modal">
+    <h3>申请调课</h3>
+    <div class="hint">选择需要调整的课程与原因，提交后同步至年级组。</div>
+    <label>原课程</label><select id="swapCourse">${opts}</select>
+    <div class="row2">
+      <div><label>调到星期</label><select id="swapDay">${DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join("")}</select></div>
+      <div><label>调到节次</label><select id="swapSlot">${state.slots.map((s,i)=>`<option value="${i}">${s.t} ${s.time}</option>`).join("")}</select></div>
+    </div>
+    <label>调课原因</label>
+    <textarea id="swapReason" rows="3" placeholder="如：外出教研培训，需与同事对调"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="swapCancel">取消</button>
+      <button class="btn btn-accent" id="swapConfirm">提交申请</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mask);
+  mask.querySelector("#swapCancel").addEventListener("click", ()=>mask.remove());
+  mask.addEventListener("click", e=>{ if(e.target===mask) mask.remove(); });
+  mask.querySelector("#swapConfirm").addEventListener("click", ()=>{
+    const reason = mask.querySelector("#swapReason").value.trim();
+    if(!reason){ toast("请填写调课原因"); return; }
+    const maxSwapId = state.swapLogs.reduce((m,x)=>Math.max(m, x.id||0),0);
+    state.swapLogs.unshift({
+      id: maxSwapId+1,
+      d:`第 ${currentWeek()+state.weekOffset} 周 今天`,
+      c: mask.querySelector("#swapCourse").options[mask.querySelector("#swapCourse").selectedIndex].text,
+      from:"原节次", to: DAYS[+mask.querySelector("#swapDay").value]+" "+state.slots[+mask.querySelector("#swapSlot").value].t,
+      reason, status:"待审核"
+    });
+    saveState(); renderSchedule(); mask.remove(); toast("调课申请已提交");
+  });
+}
+
+/* ===== 自动排座 ===== */
+function autoSeat(strategy){
+  const rows = state.seating.rows, cols = state.seating.cols;
+  const n = rows*cols;
+  const oldCells = state.seating.cells || [];
+  // 保留已锁定座位：位置和学生都不动
+  const locked = {};
+  const lockedStudents = new Set();
+  oldCells.forEach((c,i)=>{
+    if(c && c.locked){
+      locked[i] = {no:c.no, name:c.name, locked:true};
+      lockedStudents.add(c.no);
+    }
+  });
+  const cells = new Array(n).fill(null);
+  // 填充已锁定座位
+  Object.keys(locked).forEach(k=>{ cells[+k] = locked[k]; });
+  // 未锁定学生列表
+  let list = state.students.filter(s=>!lockedStudents.has(s.no));
+  if(strategy==="random"){
+    for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
+  } else if(strategy==="scoreMix"){
+    // 成绩搭配·优帮弱：按成绩降序排，高分组与低分组相邻同桌
+    const scored = list.map(s=>({s, v:scoreOf(s.no, state.gradeIdx, state.subjectIdx)}))
+      .sort((a,b)=>(b.v==null?-1:b.v)-(a.v==null?-1:a.v));
+    const high = scored.filter(x=>x.v!=null).map(x=>x.s);
+    const low = scored.filter(x=>x.v==null).map(x=>x.s);
+    const all = high.concat(low);
+    const half = Math.ceil(all.length/2);
+    const A = all.slice(0,half), B = all.slice(half);
+    list = [];
+    for(let i=0;i<Math.max(A.length,B.length);i++){
+      if(i<A.length) list.push(A[i]);
+      if(i<B.length) list.push(B[i]);
+    }
+  } else {
+    list.sort((a,b)=>{
+      const sa = scoreOf(a.no, state.gradeIdx, state.subjectIdx), sb = scoreOf(b.no, state.gradeIdx, state.subjectIdx);
+      const va = sa==null?-1:sa, vb = sb==null?-1:sb;
+      return strategy==="scoreDesc" ? vb-va : va-vb;
+    });
+  }
+  // 填充未锁定空位（跳过已锁定位置）
+  let idx = 0;
+  list.forEach(s=>{
+    while(idx<n && cells[idx]) idx++;
+    if(idx<n) cells[idx] = {no:s.no,name:s.name, locked:false};
+  });
+  state.seating.cells = cells;
+  seatSelected = null;
+  saveState(); renderSeating();
+  const msg = strategy==="random"?"已随机打散（锁定座位保持不动）"
+    :strategy==="scoreDesc"?"已按成绩排座，优生靠前（锁定座位保持不动）"
+    :strategy==="scoreMix"?"已按成绩搭配排座，优帮弱同桌（锁定座位保持不动）"
+    :"已按成绩排座，优生靠后（锁定座位保持不动）";
+  toast(msg);
+}
+
+/* ===== CSV 导入 ===== */
+let importCtx = null; // {type, rows}
+function openImport(type){
+  importCtx = {type, rows:null};
+  const meta = {
+    students:["导入学生名单","支持 .xlsx / .xls / .csv，列顺序：学号,姓名,性别,成绩,标签,备注（第一行为表头；标签可用逗号/顿号/分号分隔多个；性别留空默认男）。导入后将替换现有名单，成绩列写入当前选中科目。"],
+    grades:["导入成绩","支持 .xlsx / .xls / .csv：第一列学号，其后各列科目名（如 语文/数学/物理…），按科目匹配写入。也可用两列格式：学号,成绩（写入当前选中科目）。"],
+    schedule:["导入课表","支持 .xlsx / .xls / .csv：第一列为星期（周一…周五），其后 7 列依次为第1～7节科目。将覆盖当前班级课表。"]
+  }[type];
+  $("#importTitle").textContent = meta[0];
+  $("#importHint").textContent = meta[1];
+  $("#importFile").value = "";
+  $("#importPreviewBox").innerHTML = "";
+  $("#importNote").innerHTML = "";
+  $("#importModal").classList.add("show");
+}
+$("#importCancel").addEventListener("click", ()=>$("#importModal").classList.remove("show"));
+$("#importModal").addEventListener("click", e=>{ if(e.target.id==="importModal") $("#importModal").classList.remove("show"); });
+$("#importFile").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  readSpreadsheet(file, rows=>{
+    importCtx.rows = rows;
+    // 预览
+    const head = rows.slice(0,6);
+    const cols = Math.max(...head.map(r=>r.length),1);
+    let h = "<table><thead><tr>";
+    for(let i=0;i<cols;i++) h+=`<th>列${i+1}</th>`;
+    h+="</tr></thead><tbody>";
+    head.forEach(r=>{ h+="<tr>"; for(let i=0;i<cols;i++) h+=`<td>${esc(r[i]||"")}</td>`; h+="</tr>"; });
+    h+="</tbody></table>";
+    $("#importPreviewBox").innerHTML = `<div class="import-preview">${h}</div>`;
+    const fmt = /\.(xlsx|xls)$/i.test(file.name) ? "Excel" : "CSV";
+    $("#importNote").innerHTML = `已读取 ${fmt} 文件，共解析 ${rows.length} 行数据（含表头）。请核对预览后点击确认导入。`;
+  });
+});
+$("#importConfirm").addEventListener("click", ()=>{
+  if(!importCtx || !importCtx.rows){ toast("请先选择文件"); return; }
+  const type = importCtx.type;
+  const rows = importCtx.rows;
+  let ok = 0, skip = 0;
+  if(type==="students"){
+    const list = [];
+    rows.forEach((r,idx)=>{
+      if(idx===0 && /学号/i.test(String(r[0]||""))) return; // 跳过表头
+      if(!String(r[1]||"").trim() && !String(r[0]||"").trim()){ skip++; return; }
+      const no = String(r[0]||"").trim() || String(idx).padStart(2,"0");
+      const name = String(r[1]||"").trim();
+      if(!name){ skip++; return; }
+      // 判断列格式（兼容三种）：
+      //  A 新格式：学号,姓名,性别,成绩,标签,备注（第3列=性别,第4列=成绩数字）
+      //  B 过渡格式：学号,姓名,成绩,标签,备注（第3列=成绩数字,无性别）
+      //  C 旧格式：学号,姓名,性别,职务,电话,备注
+      const c2 = String(r[2]||"").trim();
+      const c3 = String(r[3]||"").trim();
+      const isGender = /^(男|女)$/.test(c2);
+      const isScore3 = /^\d{1,3}(\.\d+)?$/.test(c3);
+      const isScore2 = /^\d{1,3}(\.\d+)?$/.test(c2);
+      const isJob = /^(班长|副班长|科代表|c|v|l|n)$/.test(c3);
+      let stu;
+      if(isGender && (isScore3 || isJob)){
+        // A 或 C：第3列是性别
+        if(isScore3){
+          // A 新格式
+          const tags = String(r[4]||"").trim().split(/[,，、;；]+/).map(t=>t.trim()).filter(Boolean);
+          stu = {no, name, g:c2, phone:"", tags, note:String(r[5]||"").trim()||"", score:parseFloat(c3)};
+        } else {
+          // C 旧格式（含职务）
+          const roleKey = ({班长:"c",副班长:"v",科代表:"l"})[c3] || c3 || "n";
+          stu = {no, name, g:c2, phone:String(r[4]||"").trim()||"", tags:[], note:String(r[5]||"").trim()||""};
+        }
+      } else if(isScore2){
+        // B 过渡格式：无性别列，成绩在第3列
+        const tags = String(r[3]||"").trim().split(/[,，、;；]+/).map(t=>t.trim()).filter(Boolean);
+        stu = {no, name, g:"男", phone:"", tags, note:String(r[4]||"").trim()||"", score:parseFloat(c2)};
+      } else {
+        // 兜底：按旧格式（性别在第3列或缺省）
+        stu = {no, name, g:isGender?c2:"男", phone:String(r[4]||"").trim()||"", tags:[], note:String(r[5]||"").trim()||""};
+      }
+      list.push(stu);
+      ok++;
+    });
+    // 导入的成绩写入当前考试 + 当前科目
+    const siNow = state.subjectIdx;
+    const subjNow = siNow===-1 ? null : state.subjects[siNow].name;
+    list.forEach(st=>{
+      if(st.score!=null && subjNow){
+        if(!state.scores[state.gradeIdx][subjNow]) state.scores[state.gradeIdx][subjNow] = {};
+        state.scores[state.gradeIdx][subjNow][st.no] = st.score;
+      }
+      delete st.score;
+    });
+    state.students = list;
+    // 重建座位
+    const rowsN = state.settings.rows, colsN = state.settings.cols;
+    const cells = new Array(rowsN*colsN).fill(null);
+    // 保留已有锁定座位（学生仍在新名单中时）
+    (state.seating.cells||[]).forEach((c,i)=>{
+      if(c && c.locked && list.some(s=>s.no===c.no) && i<cells.length) cells[i] = {no:c.no, name:c.name, locked:true};
+    });
+    list.forEach((s,i)=>{ if(!cells[i] && i<cells.length) cells[i]={no:s.no,name:s.name,locked:false}; });
+    state.seating = {rows:rowsN, cols:colsN, cells};
+    toast(`已导入 ${ok} 名学生${skip?`，跳过 ${skip} 行`:""}`);
+  }
+  else if(type==="grades"){
+    const gi = state.gradeIdx;
+    // 解析表头：第一行若含学号，则其余列名匹配科目
+    const header = rows[0]||[];
+    const hasHeader = /学号/i.test(String(header[0]||""));
+    const colSubj = [];
+    if(hasHeader){
+      for(let c=1;c<header.length;c++){
+        const h = String(header[c]||"").trim();
+        const m = state.subjects.findIndex(x=>x.name===h);
+        colSubj[c] = m>=0 ? m : null;
+      }
+    }
+    rows.forEach((r,idx)=>{
+      if(idx===0 && hasHeader) return;
+      const no = String(r[0]||"").trim();
+      if(!no){ skip++; return; }
+      if(hasHeader){
+        let any=false;
+        for(let c=1;c<r.length;c++){
+          const si = colSubj[c];
+          if(si==null||si===-1) continue;
+          const v = parseFloat(String(r[c]||"").trim());
+          if(!isNaN(v)){
+            const sn = state.subjects[si].name;
+            if(!state.scores[gi][sn]) state.scores[gi][sn] = {};
+            state.scores[gi][sn][no] = v; any=true;
+          }
+        }
+        if(any) ok++;
+        else if(r.slice(1).some(x=>String(x).trim()!=="")) skip++;
+      } else {
+        // 无表头：视为 学号,当前科目成绩
+        const v = parseFloat(String(r[1]||"").trim());
+        if(isNaN(v)){ skip++; return; }
+        const sn = state.subjects[state.subjectIdx===-1?0:state.subjectIdx].name;
+        if(!state.scores[gi][sn]) state.scores[gi][sn] = {};
+        state.scores[gi][sn][no] = v;
+        ok++;
+      }
+    });
+    toast(`已导入 ${ok} 条成绩${skip?`，跳过 ${skip} 行`:""}`);
+  }
+  else if(type==="schedule"){
+    const cls = state.schedView;
+    const dayMap = {周一:0,周二:1,周三:2,周四:3,周五:4};
+    rows.forEach((r)=>{
+      const day = dayMap[String(r[0]||"").trim()];
+      if(day===undefined) return;
+      for(let s=0;s<state.slots.length;s++){
+        const v = String(r[s+1]||"").trim();
+        if(v) state.schedule[cls][day][s] = v;
+      }
+      ok++;
+    });
+    toast(`已更新 ${ok} 天课表`);
+  }
+  saveState();
+  // 立即刷新对应视图（不依赖路由分发，确保导入后马上看到结果）
+  if(type==="students"){ renderClass(); renderSeating(); }
+  else if(type==="grades"){ renderGrades(); }
+  else if(type==="schedule"){ renderSchedule(); }
+  $("#importModal").classList.remove("show");
+});
+
+function addTodo(){
+  const tt = $("#todoInput").value.trim();
+  if(!tt) return;
+  const pri = $("#todoPri").value;
+  state.todos.unshift({id:Date.now(), tt, due:"今天", pri, done:false});
+  $("#todoInput").value = "";
+  saveState(); renderTodoList();
+  $("#todoCount").textContent = `${state.todos.filter(x=>!x.done).length} 项未完成`;
+  toast("已添加待办");
+}
+function closeSidebar(){
+  $("#sidebar").classList.remove("open");
+  $("#mask").classList.remove("show");
+}
+
+/* =========================================================
+   启动
+========================================================= */
+function initDates(){
+  const now = new Date();
+  const ds = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+  $("#todayDate").textContent = ds;
+  $("#heroDate").textContent = ds;
+  const wd = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"][now.getDay()];
+  $("#todayWeek").textContent = wd;
+}
+function init(){
+  initDates();
+  bindEvents();
+  router();
+}
+init();
+</script>
+</body>
+</html>
