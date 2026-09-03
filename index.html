@@ -717,6 +717,11 @@ td .mono{font-variant-numeric:tabular-nums}
     <label style="margin-top:14px">课表时间段（可修改名称与时间，可增删，如午托/晚托）</label>
     <div id="slotManager"></div>
     <button class="btn btn-ghost btn-sm" id="btnAddSlot" style="margin-top:6px">＋ 添加时间段</button>
+    <label style="margin-top:14px">数据备份与迁移（换设备 / 换网址后一次性恢复用）</label>
+    <div class="row2">
+      <button class="btn btn-ghost btn-sm" id="btnBackupExport">⬇ 导出备份</button>
+      <button class="btn btn-ghost btn-sm" id="btnBackupImport">⬆ 导入备份</button>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="settingsCancel">取消</button>
       <button class="btn btn-accent" id="settingsSave">保存</button>
@@ -737,7 +742,7 @@ td .mono{font-variant-numeric:tabular-nums}
       <div><label>性别</label><select id="stuGender"><option>男</option><option>女</option></select></div>
       <div><label>联系电话</label><input id="stuPhone" placeholder="家长电话"></div>
     </div>
-    <label>成绩（当前考试）</label>
+    <label>档案参考成绩（用于名单展示；各科正式成绩请在「成绩分析」模块录入/导入）</label>
     <input id="stuScore" type="number" placeholder="可留空，不限百分制">
     <label>标签（可自定义，点击标签可删除）</label>
     <div class="preset-tags" id="stuPresetTags"></div>
@@ -1165,6 +1170,23 @@ function normalizeState(s){
       }
     });
   });
+  // 旧版本迁移：学生档案补"参考成绩"字段（一次性地从当前考试各科合计提取；此后由名单导入/编辑维护，不再联动考试）
+  if(Array.isArray(s.students)){
+    const gIdx = Math.min(s.gradeIdx||0, Math.max((s.exams||[]).length-1,0));
+    s.students.forEach(st=>{
+      if(st && st.score==null){
+        let sum = 0, has = false;
+        const subjMap = s.scores && s.scores[gIdx];
+        if(subjMap && Array.isArray(s.subjects)){
+          s.subjects.forEach(sj=>{
+            const v = subjMap[sj.name] && subjMap[sj.name][st.no];
+            if(v!=null && !isNaN(v)){ sum += +v; has = true; }
+          });
+        }
+        st.score = has ? sum : "";
+      }
+    });
+  }
   return s;
 }
 
@@ -1495,14 +1517,13 @@ function renderStuTable(kw){
   const q = (kw||"").trim().toLowerCase();
   const rows = state.students.map((s)=>{
     if(q && !s.name.toLowerCase().includes(q) && !s.no.includes(q)) return "";
-    const sc = scoreOf(s.no, state.gradeIdx, state.subjectIdx);
-    const lv = gradeLevel(sc, state.subjectIdx);
+    const sc = (s.score!=null && s.score!=="") ? s.score : null; // 档案参考成绩（名单导入/录入），与成绩分析分离
     const tags = (s.tags||[]).map((t,i)=>`<span class="stu-tag ${i%2?"":"hl"}">${esc(t)}</span>`).join("");
     return `<tr>
       <td class="mono">${s.no}</td>
       <td><span class="small-avatar ${s.g==="女"?"m":""}">${s.name[0]}</span><b>${s.name}</b></td>
       <td><span style="color:${s.g==="女"?"var(--info)":"var(--ink)"}">${s.g||"—"}</span></td>
-      <td><button class="btn btn-ghost btn-sm" data-grade="${s.no}" title="点击修改成绩"><b class="mono" style="color:${lv[1]==="green"?"var(--good)":lv[1]==="red"?"var(--bad)":"var(--ink)"}">${sc==null?"—":sc}</b></button></td>
+      <td><button class="btn btn-ghost btn-sm" data-edit="${s.no}" title="点击编辑档案（含参考成绩）"><b class="mono">${sc==null?"—":sc}</b></button></td>
       <td style="min-width:110px">${tags||'<span style="color:var(--faint);font-size:12px">—</span>'}</td>
       <td style="max-width:200px;white-space:normal;color:var(--muted);font-size:12.5px">${esc(s.note)||"—"}</td>
       <td>
@@ -1902,6 +1923,37 @@ function bindEvents(){
     }
   });
 
+  /* 数据备份与迁移 */
+  $("#btnBackupExport").addEventListener("click", ()=>{
+    const ds = new Date();
+    const fname = `教师工作台备份_${ds.getFullYear()}${String(ds.getMonth()+1).padStart(2,"0")}${String(ds.getDate()).padStart(2,"0")}.json`;
+    downloadFile(fname, JSON.stringify(state, null, 2), "application/json");
+    toast("备份已导出（.json）");
+  });
+  $("#btnBackupImport").addEventListener("click", ()=>{
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = ".json";
+    input.onchange = ()=>{
+      const f = input.files && input.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const raw = String(reader.result||"").replace(/^\ufeff/,"");
+          const s = JSON.parse(raw);
+          if(!s || !s.students || !s.scores || !s.schedule || !s.settings) throw new Error("不是有效的工作台备份文件");
+          normalizeState(s);
+          state = s;
+          saveState();
+          toast("备份已恢复");
+          try{ location.hash = "#/home"; render(); }catch(e){}
+        }catch(e){ toast("恢复失败："+e.message); }
+      };
+      reader.readAsText(f, "utf-8");
+    };
+    input.click();
+  });
+
   /* 课表 */
   $("#schedSeg").addEventListener("click", e=>{
     const b = e.target.closest("[data-v]");
@@ -1999,7 +2051,7 @@ function bindEvents(){
   });
   $("#btnStuExport").addEventListener("click", ()=>{
     const header = ["学号","姓名","性别","成绩","标签","备注"];
-    const rows = state.students.map(s=>[s.no,s.name,s.g||"",scoreOf(s.no,state.gradeIdx)??"",(s.tags||[]).join(";"),s.note||""]);
+    const rows = state.students.map(s=>[s.no,s.name,s.g||"",(s.score!=null&&s.score!==""?s.score:""),(s.tags||[]).join(";"),s.note||""]);
     downloadXlsx(`学生名单_${state.settings.className}.xlsx`, header, rows);
     toast("名单已导出（.xlsx）");
   });
@@ -2256,7 +2308,7 @@ function openStuModal(s){
   $("#stuGender").value = s ? s.g : "男";
   $("#stuPhone").value = s ? s.phone : "";
   $("#stuNote").value = s ? s.note : "";
-  $("#stuScore").value = s ? (scoreOf(s.no, state.gradeIdx, state.subjectIdx)??"") : "";
+  $("#stuScore").value = s ? (s.score!=null&&s.score!==""?s.score:"") : "";
   stuTags = s && Array.isArray(s.tags) ? s.tags.slice() : [];
   renderStuPreset();
   renderStuTagList();
@@ -2283,9 +2335,11 @@ $("#stuSave").addEventListener("click", ()=>{
   const no = $("#stuNo").value.trim();
   const name = $("#stuName").value.trim();
   if(!no||!name){ toast("学号和姓名不能为空"); return; }
+  const sv = $("#stuScore").value.trim();
   const data = {no, name, g:$("#stuGender").value,
     phone:$("#stuPhone").value.trim(), note:$("#stuNote").value.trim(),
-    tags: stuTags.slice()};
+    tags: stuTags.slice(),
+    score: sv==="" ? "" : parseFloat(sv)};
   if(editingStu){
     Object.assign(editingStu, data);
     toast("档案已更新");
@@ -2299,18 +2353,7 @@ $("#stuSave").addEventListener("click", ()=>{
     state.seating.cells = cells;
     toast("学生已添加");
   }
-  // 保存成绩（当前考试 + 当前科目）
-  const sv = $("#stuScore").value;
-  const si = state.subjectIdx;
-  const subjName = si===-1 ? null : state.subjects[si].name;
-  if(si!==-1){
-    if(!state.scores[state.gradeIdx][subjName]) state.scores[state.gradeIdx][subjName] = {};
-    if(sv===""){ delete state.scores[state.gradeIdx][subjName][no]; }
-    else {
-      const n = parseFloat(sv);
-      if(!isNaN(n)) state.scores[state.gradeIdx][subjName][no] = n;
-    }
-  }
+  // 档案参考成绩已随 data 写入学生对象；各科正式成绩请在"成绩分析"模块维护（不再写 scores）
   saveState(); renderClass(); renderSeating(); $("#stuModal").classList.remove("show");
 });
 
@@ -2451,7 +2494,7 @@ let importCtx = null; // {type, rows}
 function openImport(type){
   importCtx = {type, rows:null};
   const meta = {
-    students:["导入学生名单","支持 .xlsx / .xls / .csv，列顺序：学号,姓名,性别,成绩,标签,备注（第一行为表头；标签可用逗号/顿号/分号分隔多个；性别留空默认男）。导入后将替换现有名单，成绩列写入当前选中科目。"],
+    students:["导入学生名单","支持 .xlsx / .xls / .csv，列顺序：学号,姓名,性别,成绩,标签,备注（第一行为表头；标签可用逗号/顿号/分号分隔多个；性别留空默认男）。导入后将替换现有名单；「成绩」列为档案参考成绩（用于名单展示），各科正式成绩请到「成绩分析」模块录入或导入。"],
     grades:["导入成绩","支持 .xlsx / .xls / .csv：第一列学号，其后各列科目名（如 语文/数学/物理…），按科目匹配写入。也可用两列格式：学号,成绩（写入当前选中科目）。"],
     schedule:["导入课表","支持 .xlsx / .xls / .csv：第一列为星期（周一…周五），其后 7 列依次为第1～7节科目。将覆盖当前班级课表。"]
   }[type];
@@ -2528,16 +2571,9 @@ $("#importConfirm").addEventListener("click", ()=>{
       list.push(stu);
       ok++;
     });
-    // 导入的成绩写入当前考试 + 当前科目
-    const siNow = state.subjectIdx;
-    const subjNow = siNow===-1 ? null : state.subjects[siNow].name;
-    list.forEach(st=>{
-      if(st.score!=null && subjNow){
-        if(!state.scores[state.gradeIdx][subjNow]) state.scores[state.gradeIdx][subjNow] = {};
-        state.scores[state.gradeIdx][subjNow][st.no] = st.score;
-      }
-      delete st.score;
-    });
+    // 导入学生的"成绩"列作为档案参考成绩（stu.score）独立存放，
+    // 不再写入 scores 三维结构，避免与"成绩分析"（多考试×多科目）互相污染导致成绩对不上。
+    list.forEach(st=>{ if(st.score==null) st.score = ""; });
     state.students = list;
     // 重建座位
     const rowsN = state.settings.rows, colsN = state.settings.cols;
