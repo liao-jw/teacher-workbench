@@ -683,7 +683,7 @@ td .mono{font-variant-numeric:tabular-nums}
         <div class="seat-stage">
           <div class="board-sign" id="seatBoard">初二（3）班 · 教室座位图</div>
           <div class="seat-grid" id="seatGrid"></div>
-          <div class="seat-tip"><b>操作提示：</b>点击一名学生后再点另一名学生可交换座位、点空位可将学生移入；点「锁定」固定座位，自动排座不移动已锁定学生；格子内为当前科目成绩。排座依据为当前选中的考试与科目。</div>
+          <div class="seat-tip"><b>操作提示：</b>点击一名学生后再点另一名学生可交换座位、点空位可将学生移入；点「锁定」固定座位，自动排座不移动已锁定学生；格内数字为最近一次考试的总成绩（随成绩分析自动更新）。排座依据为最近一次考试总成绩。</div>
         </div>
       </section>
     </main>
@@ -742,8 +742,8 @@ td .mono{font-variant-numeric:tabular-nums}
       <div><label>性别</label><select id="stuGender"><option>男</option><option>女</option></select></div>
       <div><label>联系电话</label><input id="stuPhone" placeholder="家长电话"></div>
     </div>
-    <label>档案参考成绩（用于名单展示；各科正式成绩请在「成绩分析」模块录入/导入）</label>
-    <input id="stuScore" type="number" placeholder="可留空，不限百分制">
+    <label>最近一次考试总成绩（只读，随成绩分析自动更新；如需修改请到「成绩分析」模块）</label>
+    <input id="stuScore" type="number" placeholder="—" disabled style="background:var(--bg);color:var(--muted)">
     <label>标签（可自定义，点击标签可删除）</label>
     <div class="preset-tags" id="stuPresetTags"></div>
     <div class="tag-editor">
@@ -1170,20 +1170,14 @@ function normalizeState(s){
       }
     });
   });
-  // 旧版本迁移：学生档案补"参考成绩"字段（一次性地从当前考试各科合计提取；此后由名单导入/编辑维护，不再联动考试）
-  if(Array.isArray(s.students)){
-    const gIdx = Math.min(s.gradeIdx||0, Math.max((s.exams||[]).length-1,0));
+  // 旧版本迁移：学生档案曾有的"参考成绩"一次性并入最近一次考试的显式总分记录（此后统一以成绩分析为准）
+  if(Array.isArray(s.students) && Array.isArray(s.scores)){
+    const li = Math.max(0, (s.exams||[]).length-1);
+    if(s.scores[li] && !s.scores[li]["总分"]) s.scores[li]["总分"] = {};
     s.students.forEach(st=>{
-      if(st && st.score==null){
-        let sum = 0, has = false;
-        const subjMap = s.scores && s.scores[gIdx];
-        if(subjMap && Array.isArray(s.subjects)){
-          s.subjects.forEach(sj=>{
-            const v = subjMap[sj.name] && subjMap[sj.name][st.no];
-            if(v!=null && !isNaN(v)){ sum += +v; has = true; }
-          });
-        }
-        st.score = has ? sum : "";
+      if(st && st.score!=null && st.score!=="" && s.scores[li] && s.scores[li]["总分"] && s.scores[li]["总分"][st.no]==null){
+        const n = parseFloat(st.score);
+        if(!isNaN(n)) s.scores[li]["总分"][st.no] = n;
       }
     });
   }
@@ -1211,18 +1205,29 @@ function scoreOf(no, gi, si){
   const subjMap = state.scores[gi];
   if(!subjMap) return null;
   if(si===-1){
-    // 总分：所有科目得分之和（忽略 null）
+    // 总分：各科得分之和（忽略 null）；若无任何科目成绩，回退到显式"总分"记录（支持名单导入总成绩）
     let sum = 0, has = false;
     state.subjects.forEach((subj)=>{
       const v = subjMap[subj.name] && subjMap[subj.name][no];
       if(v!=null && !isNaN(v)){ sum += v; has = true; }
     });
-    return has ? sum : null;
+    if(has) return sum;
+    const tr = subjMap["总分"] && subjMap["总分"][no];
+    return (tr!=null && !isNaN(tr)) ? tr : null;
   }
   const subj = state.subjects[si];
   if(!subj) return null;
   const v = subjMap[subj.name] && subjMap[subj.name][no];
   return (v===0?0:(v||null));
+}
+// 最近一次考试下标（成绩分析最后一场考试）
+function lastExamIdx(){ return Math.max(0, (state.exams||[]).length-1); }
+// 最近一次考试的总成绩（学生管理、排座统一口径；成绩分析更新后自动同步）
+function lastTotal(no){ return scoreOf(no, lastExamIdx(), -1); }
+// 某场考试中该生是否有任一科目成绩（决定总分是否可按各科合计）
+function hasAnySubjectScore(gi, no){
+  const m = state.scores[gi]; if(!m) return false;
+  return state.subjects.some(sj=>{ const v = m[sj.name] && m[sj.name][no]; return v!=null && !isNaN(v); });
 }
 function fullOf(si){
   si = (si===undefined||si===null) ? state.subjectIdx : si;
@@ -1517,13 +1522,13 @@ function renderStuTable(kw){
   const q = (kw||"").trim().toLowerCase();
   const rows = state.students.map((s)=>{
     if(q && !s.name.toLowerCase().includes(q) && !s.no.includes(q)) return "";
-    const sc = (s.score!=null && s.score!=="") ? s.score : null; // 档案参考成绩（名单导入/录入），与成绩分析分离
+    const sc = lastTotal(s.no); // 最近一次考试的总成绩（成绩分析汇总，自动同步）
     const tags = (s.tags||[]).map((t,i)=>`<span class="stu-tag ${i%2?"":"hl"}">${esc(t)}</span>`).join("");
     return `<tr>
       <td class="mono">${s.no}</td>
       <td><span class="small-avatar ${s.g==="女"?"m":""}">${s.name[0]}</span><b>${s.name}</b></td>
       <td><span style="color:${s.g==="女"?"var(--info)":"var(--ink)"}">${s.g||"—"}</span></td>
-      <td><button class="btn btn-ghost btn-sm" data-edit="${s.no}" title="点击编辑档案（含参考成绩）"><b class="mono">${sc==null?"—":sc}</b></button></td>
+      <td><b class="mono" title="最近一次考试总成绩（各科合计，随成绩分析更新）">${sc==null?"—":sc}</b></td>
       <td style="min-width:110px">${tags||'<span style="color:var(--faint);font-size:12px">—</span>'}</td>
       <td style="max-width:200px;white-space:normal;color:var(--muted);font-size:12.5px">${esc(s.note)||"—"}</td>
       <td>
@@ -1687,25 +1692,19 @@ function renderSeating(){
   $("#seatCols").value = state.seating.cols;
   $("#seatGrid").style.gridTemplateColumns = `repeat(${state.seating.cols},1fr)`;
   const cells = state.seating.cells;
-  const si = state.subjectIdx;
-  const curName = si===-1 ? "总分" : (state.subjects[si]||{name:""}).name;
-  // 科目选择器（本地化：不改变全局 subjectIdx 查看逻辑）
+  // 排座成绩统一显示"最近一次考试的总成绩"（随成绩分析更新自动同步）
+  const examName = state.exams[lastExamIdx()] || "本场考试";
   const seatSel = $("#seatSubjectSel");
-  if(seatSel && seatSel.options.length !== state.subjects.length+1){
-    const opts = state.subjects.map((s,i)=>`<option value="${i}">${s.name}（满分${s.full}）</option>`).join("")
-      + `<option value="-1">总分（各科合计）</option>`;
-    seatSel.innerHTML = opts;
-  }
-  if(seatSel && seatSel.value !== String(si)) seatSel.value = String(si);
+  if(seatSel){ seatSel.style.display = "none"; } // 排座固定显示总成绩，隐藏科目选择器
   const eh = $("#seatExamHint");
-  if(eh) eh.textContent = (state.exams[state.gradeIdx]||"本场考试") + " · " + curName + "成绩";
+  if(eh) eh.textContent = examName + " · 总成绩";
   const board = $("#seatBoard");
-  if(board) board.textContent = state.settings.className + " · 教室座位图（" + (state.exams[state.gradeIdx]||"") + " · " + curName + "）";
+  if(board) board.textContent = state.settings.className + " · 教室座位图（" + examName + " · 总成绩）";
   $("#seatGrid").innerHTML = cells.map((cell,i)=>{
     if(!cell) return `<div class="seat empty" data-i="${i}"><span class="nm">空位</span></div>`;
     const sel = seatSelected===i;
     const locked = !!cell.locked;
-    const sc = scoreOf(cell.no, state.gradeIdx, si);
+    const sc = lastTotal(cell.no);
     const stu = state.students.find(x=>x.no===cell.no);
     const g = stu && (stu.g||"");
     const gCls = g==="女"?"f":(g==="男"?"m":"");
@@ -2051,7 +2050,7 @@ function bindEvents(){
   });
   $("#btnStuExport").addEventListener("click", ()=>{
     const header = ["学号","姓名","性别","成绩","标签","备注"];
-    const rows = state.students.map(s=>[s.no,s.name,s.g||"",(s.score!=null&&s.score!==""?s.score:""),(s.tags||[]).join(";"),s.note||""]);
+    const rows = state.students.map(s=>[s.no,s.name,s.g||"",(lastTotal(s.no)??""),(s.tags||[]).join(";"),s.note||""]);
     downloadXlsx(`学生名单_${state.settings.className}.xlsx`, header, rows);
     toast("名单已导出（.xlsx）");
   });
@@ -2232,10 +2231,7 @@ function bindEvents(){
   });
 
   /* 座位 */
-  $("#seatSubjectSel").addEventListener("change", e=>{
-    state.subjectIdx = parseInt(e.target.value)||-1;
-    saveState(); renderSeating();
-  });
+  $("#seatSubjectSel").addEventListener("change", ()=>{ /* 排座固定显示最近一次考试总成绩，选择器已隐藏 */ });
   $("#seatApply").addEventListener("click", ()=>{
     const rows = Math.min(12, Math.max(1, parseInt($("#seatRows").value)||1));
     const cols = Math.min(12, Math.max(1, parseInt($("#seatCols").value)||1));
@@ -2308,7 +2304,7 @@ function openStuModal(s){
   $("#stuGender").value = s ? s.g : "男";
   $("#stuPhone").value = s ? s.phone : "";
   $("#stuNote").value = s ? s.note : "";
-  $("#stuScore").value = s ? (s.score!=null&&s.score!==""?s.score:"") : "";
+  $("#stuScore").value = s ? (lastTotal(s.no) ?? "") : "";
   stuTags = s && Array.isArray(s.tags) ? s.tags.slice() : [];
   renderStuPreset();
   renderStuTagList();
@@ -2335,11 +2331,9 @@ $("#stuSave").addEventListener("click", ()=>{
   const no = $("#stuNo").value.trim();
   const name = $("#stuName").value.trim();
   if(!no||!name){ toast("学号和姓名不能为空"); return; }
-  const sv = $("#stuScore").value.trim();
   const data = {no, name, g:$("#stuGender").value,
     phone:$("#stuPhone").value.trim(), note:$("#stuNote").value.trim(),
-    tags: stuTags.slice(),
-    score: sv==="" ? "" : parseFloat(sv)};
+    tags: stuTags.slice()};
   if(editingStu){
     Object.assign(editingStu, data);
     toast("档案已更新");
@@ -2374,14 +2368,23 @@ $("#gradeSave").addEventListener("click", ()=>{
   const v = $("#gradeInput").value;
   const gi = state.gradeIdx, si = state.subjectIdx;
   if(v===""){
-    if(si===-1){ toast("总分由各科自动合计，请改各科成绩"); return; }
-    delete state.scores[gi][state.subjects[si].name][editingGradeNo];
+    if(si===-1){
+      if(hasAnySubjectScore(gi, editingGradeNo)){ toast("总分由各科自动合计，请改各科成绩"); return; }
+      if(state.scores[gi]["总分"]) delete state.scores[gi]["总分"][editingGradeNo];
+    } else {
+      delete state.scores[gi][state.subjects[si].name][editingGradeNo];
+    }
   }
   else {
     const n = parseFloat(v);
     if(isNaN(n)){ toast("请输入有效数字"); return; }
-    if(si===-1){ toast("总分由各科自动合计，请改各科成绩"); return; }
-    state.scores[gi][state.subjects[si].name][editingGradeNo] = n;
+    if(si===-1){
+      if(hasAnySubjectScore(gi, editingGradeNo)){ toast("总分由各科自动合计，请改各科成绩"); return; }
+      if(!state.scores[gi]["总分"]) state.scores[gi]["总分"] = {};
+      state.scores[gi]["总分"][editingGradeNo] = n;
+    } else {
+      state.scores[gi][state.subjects[si].name][editingGradeNo] = n;
+    }
   }
   saveState(); renderGrades(); $("#gradeModal").classList.remove("show"); toast("成绩已保存");
 });
@@ -2453,8 +2456,8 @@ function autoSeat(strategy){
   if(strategy==="random"){
     for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
   } else if(strategy==="scoreMix"){
-    // 成绩搭配·优帮弱：按成绩降序排，高分组与低分组相邻同桌
-    const scored = list.map(s=>({s, v:scoreOf(s.no, state.gradeIdx, state.subjectIdx)}))
+    // 成绩搭配·优帮弱：按最近一次考试总成绩降序排，高分组与低分组相邻同桌
+    const scored = list.map(s=>({s, v:lastTotal(s.no)}))
       .sort((a,b)=>(b.v==null?-1:b.v)-(a.v==null?-1:a.v));
     const high = scored.filter(x=>x.v!=null).map(x=>x.s);
     const low = scored.filter(x=>x.v==null).map(x=>x.s);
@@ -2468,9 +2471,9 @@ function autoSeat(strategy){
     }
   } else {
     list.sort((a,b)=>{
-      const sa = scoreOf(a.no, state.gradeIdx, state.subjectIdx), sb = scoreOf(b.no, state.gradeIdx, state.subjectIdx);
-      const va = sa==null?-1:sa, vb = sb==null?-1:sb;
-      return strategy==="scoreDesc" ? vb-va : va-vb;
+      const va = lastTotal(a.no), vb = lastTotal(b.no);
+      const sa = va==null?-1:va, sb = vb==null?-1:vb;
+      return strategy==="scoreDesc" ? sb-sa : sa-sb;
     });
   }
   // 填充未锁定空位（跳过已锁定位置）
@@ -2494,7 +2497,7 @@ let importCtx = null; // {type, rows}
 function openImport(type){
   importCtx = {type, rows:null};
   const meta = {
-    students:["导入学生名单","支持 .xlsx / .xls / .csv，列顺序：学号,姓名,性别,成绩,标签,备注（第一行为表头；标签可用逗号/顿号/分号分隔多个；性别留空默认男）。导入后将替换现有名单；「成绩」列为档案参考成绩（用于名单展示），各科正式成绩请到「成绩分析」模块录入或导入。"],
+    students:["导入学生名单","支持 .xlsx / .xls / .csv，列顺序：学号,姓名,性别,成绩,标签,备注（第一行为表头；标签可用逗号/顿号/分号分隔多个；性别留空默认男）。导入后将替换现有名单；「成绩」列将作为「最近一次考试」的总成绩记录（学生管理、排座自动显示该总成绩；此后在成绩分析中录入各科成绩会自动改按各科合计）。"],
     grades:["导入成绩","支持 .xlsx / .xls / .csv：第一列学号，其后各列科目名（如 语文/数学/物理…），按科目匹配写入。也可用两列格式：学号,成绩（写入当前选中科目）。"],
     schedule:["导入课表","支持 .xlsx / .xls / .csv：第一列为星期（周一…周五），其后 7 列依次为第1～7节科目。将覆盖当前班级课表。"]
   }[type];
@@ -2571,9 +2574,17 @@ $("#importConfirm").addEventListener("click", ()=>{
       list.push(stu);
       ok++;
     });
-    // 导入学生的"成绩"列作为档案参考成绩（stu.score）独立存放，
-    // 不再写入 scores 三维结构，避免与"成绩分析"（多考试×多科目）互相污染导致成绩对不上。
-    list.forEach(st=>{ if(st.score==null) st.score = ""; });
+    // 导入学生的"成绩"列作为"最近一次考试的总成绩"写入显式总分记录；
+    // 学生管理 / 排座均读取最近一次考试总成绩，若后续在成绩分析录入了各科成绩，则自动改按各科合计。
+    const li = lastExamIdx();
+    if(!state.scores[li]["总分"]) state.scores[li]["总分"] = {};
+    list.forEach(st=>{
+      if(st.score!=null && st.score!==""){
+        const n = parseFloat(st.score);
+        if(!isNaN(n)) state.scores[li]["总分"][st.no] = n;
+      }
+      delete st.score;
+    });
     state.students = list;
     // 重建座位
     const rowsN = state.settings.rows, colsN = state.settings.cols;
