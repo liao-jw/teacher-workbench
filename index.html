@@ -950,7 +950,9 @@ const SEED_SUBJECTS = [
   {name:"物理", full:100},
   {name:"化学", full:100},
   {name:"生物", full:100},
-  {name:"道德与法治", full:100}
+  {name:"道德与法治", full:100},
+  {name:"地理", full:100},
+  {name:"历史", full:100}
 ];
 
 const ATTEND_SEED = [
@@ -1108,6 +1110,10 @@ function normalizeState(s){
   } else {
     // 保证每科有 name/full
     s.subjects = s.subjects.map(x=>typeof x==="string"?{name:x, full:100}:{name:x.name||"科目", full:+x.full||100});
+    // 兼容：默认科目新增（如地理、历史）自动并入已保存数据，不覆盖用户已有科目
+    SEED_SUBJECTS.forEach(sd=>{
+      if(!s.subjects.some(x=>x.name===sd.name)) s.subjects.push(JSON.parse(JSON.stringify(sd)));
+    });
   }
   if(s.subjectIdx==null) s.subjectIdx = 0;
   // 旧 scores 结构：scores[gi] = {no:score}（单科）→ 迁移为物理科目
