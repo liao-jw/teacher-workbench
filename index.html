@@ -2055,10 +2055,12 @@ function bindEvents(){
     toast("名单已导出（.xlsx）");
   });
   $("#btnStuClear").addEventListener("click", ()=>{
-    if(!confirm("确定一键清空学生名单吗？座位将同步清空，成绩记录仍保留（按学号关联）。")) return;
+    if(!confirm("确定一键清空学生名单吗？座位与全部成绩记录将同步清空。")) return;
     state.students = [];
     state.seating.cells = new Array(state.seating.rows*state.seating.cols).fill(null);
-    saveState(); renderClass(); renderSeating(); toast("名单已清空");
+    // 同步清空成绩（所有考试、所有科目、总分），避免旧成绩残留干扰后续导入
+    state.scores = state.scores.map(()=>({}));
+    saveState(); renderClass(); renderSeating(); toast("名单已清空（成绩同步清空）");
   });
   $("#btnAddLog").addEventListener("click", ()=>openRec("log"));
 
@@ -2497,7 +2499,7 @@ let importCtx = null; // {type, rows}
 function openImport(type){
   importCtx = {type, rows:null};
   const meta = {
-    students:["导入学生名单","支持 .xlsx / .xls / .csv，列顺序：学号,姓名,性别,成绩,标签,备注（第一行为表头；标签可用逗号/顿号/分号分隔多个；性别留空默认男）。导入后将替换现有名单；「成绩」列将作为「最近一次考试」的总成绩记录（学生管理、排座自动显示该总成绩；此后在成绩分析中录入各科成绩会自动改按各科合计）。"],
+    students:["导入学生名单","支持 .xlsx / .xls / .csv，列顺序：学号,姓名,性别,成绩,标签,备注（第一行为表头；标签可用逗号/顿号/分号分隔多个；性别留空默认男）。导入后将替换现有名单并重置全部成绩；「成绩」列将作为「最近一次考试」的总成绩记录（学生管理、排座自动显示该总成绩；此后在成绩分析中录入各科成绩会自动改按各科合计）。"],
     grades:["导入成绩","支持 .xlsx / .xls / .csv：第一列学号，其后各列科目名（如 语文/数学/物理…），按科目匹配写入。也可用两列格式：学号,成绩（写入当前选中科目）。"],
     schedule:["导入课表","支持 .xlsx / .xls / .csv：第一列为星期（周一…周五），其后 7 列依次为第1～7节科目。将覆盖当前班级课表。"]
   }[type];
@@ -2574,8 +2576,9 @@ $("#importConfirm").addEventListener("click", ()=>{
       list.push(stu);
       ok++;
     });
-    // 导入学生的"成绩"列作为"最近一次考试的总成绩"写入显式总分记录；
-    // 学生管理 / 排座均读取最近一次考试总成绩，若后续在成绩分析录入了各科成绩，则自动改按各科合计。
+    // 导入名单视为整体替换：同步重置全部成绩（清空各考试所有科目与总分记录），
+    // 避免默认/旧成绩残留导致显示的总分与导入分数不一致。
+    state.scores = state.scores.map(()=>({}));
     const li = lastExamIdx();
     if(!state.scores[li]["总分"]) state.scores[li]["总分"] = {};
     list.forEach(st=>{
