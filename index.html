@@ -340,6 +340,25 @@ td .mono{font-variant-numeric:tabular-nums}
   .hero{padding:22px 20px}
   .topbar-date{display:none}
 }
+/* 班会 PPT 全屏幻灯片 */
+.ppt-mask{position:fixed;inset:0;z-index:100;background:#0f2a20;display:flex;flex-direction:column}
+.ppt-top{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;color:#f5e6c8;font-size:14px}
+.ppt-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:20px}
+.ppt-slide{background:var(--card);border-radius:18px;box-shadow:var(--shadow);width:min(900px,92vw);min-height:min(560px,78vh);padding:48px 56px;display:flex;flex-direction:column;justify-content:center;position:relative}
+.ppt-tag{position:absolute;top:20px;left:24px;font-size:13px;color:var(--accent);font-weight:700;letter-spacing:2px}
+.ppt-slide h1{font-size:44px;color:var(--board);margin-bottom:14px;line-height:1.3}
+.ppt-slide h2{font-size:30px;color:var(--board);margin-bottom:22px}
+.ppt-slide p{font-size:17px;color:var(--muted);line-height:1.9}
+.ppt-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin:24px 0}
+.ppt-stats>div{background:var(--paper);border-radius:12px;padding:22px 10px;text-align:center}
+.ppt-stats b{display:block;font-size:34px;color:var(--accent);font-family:"Noto Serif SC",serif}
+.ppt-stats span{font-size:13px;color:var(--muted)}
+.ppt-list{font-size:18px;line-height:2.1;padding-left:8px;color:var(--ink)}
+.ppt-list p{font-size:18px;color:var(--ink);line-height:2.1;margin:4px 0}
+.ppt-note{margin-top:22px;font-size:15px;color:var(--faint)}
+.ppt-nav{display:flex;justify-content:center;gap:14px;padding:16px}
+.ppt-nav button{background:rgba(255,255,255,.12);color:#f5e6c8}
+.ppt-nav button:hover{background:rgba(255,255,255,.22)}
 </style>
 </head>
 <body>
@@ -359,6 +378,8 @@ td .mono{font-variant-numeric:tabular-nums}
       <a class="nav-item" data-route="grades" href="#/grades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>成绩分析</a>
       <a class="nav-item" data-route="tasks" href="#/tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>个人事务</a>
       <a class="nav-item" data-route="seating" href="#/seating"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>座位排列</a>
+    <a class="nav-item" data-route="phys" href="#/phys"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>物理成绩</a>
+      <a class="nav-item" data-route="summary" href="#/summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>学情总结</a>
     </nav>
     <div class="sidebar-foot">
       <b id="sideClass">初二(3)班 · 物理</b><br>
@@ -522,7 +543,7 @@ td .mono{font-variant-numeric:tabular-nums}
         <div class="pane" data-pane="discipline">
           <div class="card pad">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-              <h3 style="font-size:15px;font-weight:700">违纪记录（近一月）</h3>
+              <h3 style="font-size:15px;font-weight:700">违纪记录（近一月） · 累计扣分 <b id="disciplineTotal" style="color:var(--bad)">0</b> 分</h3>
               <button class="btn btn-primary btn-sm" id="btnAddDisc">＋ 添加记录</button>
             </div>
             <div id="disciplineList"></div>
@@ -685,6 +706,55 @@ td .mono{font-variant-numeric:tabular-nums}
           <div class="seat-grid" id="seatGrid"></div>
           <div class="seat-tip"><b>操作提示：</b>点击一名学生后再点另一名学生可交换座位、点空位可将学生移入；点「锁定」固定座位，自动排座不移动已锁定学生；格内数字为最近一次考试的总成绩（随成绩分析自动更新）。排座依据为最近一次考试总成绩。</div>
         </div>
+      </section>
+      </section>
+
+      <!-- ===== 物理成绩（多班级） ===== -->
+      <section class="view" data-view="phys">
+        <div class="section-head">
+          <div>
+            <h2 class="chalk-underline">物理成绩</h2>
+            <div class="sub">多班级物理成绩独立录入与分析</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <div class="seg" id="phyClassSeg"></div>
+            <button class="btn btn-ghost btn-sm" id="btnAddPhyClass">＋ 班级</button>
+            <button class="btn btn-ghost btn-sm" id="btnDelPhyClass" style="color:var(--bad)">删班</button>
+          </div>
+        </div>
+        <div class="section-head" style="margin-top:8px">
+          <div></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <div class="seg" id="phyExamSeg"></div>
+            <button class="btn btn-ghost btn-sm" id="btnAddPhyExam">＋ 考试</button>
+            <button class="btn btn-ghost btn-sm" id="btnDelPhyExam" style="color:var(--bad)">删考试</button>
+            <button class="btn btn-ghost btn-sm" id="btnAddPhyStu">＋ 学生</button>
+          </div>
+        </div>
+        <div class="grid grid-4" id="phyStatCards"></div>
+        <div class="card mt-16">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>排名</th><th>学号</th><th>姓名</th><th>物理得分</th><th>较上次</th><th>等级</th><th>操作</th></tr></thead>
+              <tbody id="phyRank"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 学情总结 ===== -->
+      <section class="view" data-view="summary">
+        <div class="section-head">
+          <div>
+            <h2 class="chalk-underline">学情总结</h2>
+            <div class="sub" id="summarySub">自动汇总本周班务、违纪扣分、家校沟通与成绩</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="btnGenSummary">生成总结</button>
+            <button class="btn btn-accent" id="btnGenPPT">生成班会 PPT</button>
+          </div>
+        </div>
+        <div id="summaryBody"></div>
       </section>
     </main>
   </div>
@@ -961,8 +1031,8 @@ const ATTEND_SEED = [
   {no:"19",st:"迟到",reason:"迟到 15 分钟，已约谈"}
 ];
 const DISCIPLINE_SEED = [
-  {d:"9.24",s:"赵天宇",t:"上课玩手机",h:"已没收并通知家长"},
-  {d:"9.20",s:"罗景明",t:"课间追逐打闹",h:"批评教育，写检讨"},
+  {d:"9.24",s:"赵天宇",t:"上课玩手机",deduct:2,h:"已没收并通知家长"},
+  {d:"9.20",s:"罗景明",t:"课间追逐打闹",deduct:1,h:"批评教育，写检讨"},
   {d:"9.15",s:"董浩然",t:"未交作业",h:"当天补交并说明"},
   {d:"9.10",s:"邵文博",t:"课堂纪律差",h:"课后谈话，座位调整"}
 ];
@@ -1043,7 +1113,18 @@ function defaultState(){
     discipline: JSON.parse(JSON.stringify(DISCIPLINE_SEED)),
     contacts: JSON.parse(JSON.stringify(CONTACTS_SEED)),
     research: JSON.parse(JSON.stringify(RESEARCH)),
-    swapLogs: JSON.parse(JSON.stringify(SWAP_SEED))
+    swapLogs: JSON.parse(JSON.stringify(SWAP_SEED)),
+    phy: {
+      classes: [{
+        id: 1,
+        name: SEED_SETTINGS.className,
+        students: stu.map(s=>({no:s.no, name:s.name})),
+        exams: ["第一次月考"],
+        scores: [{}]
+      }],
+      curClass: 0,
+      curExam: 0
+    }
   };
 }
 function loadState(){
@@ -1187,6 +1268,28 @@ function normalizeState(s){
       }
     });
   }
+  // 兼容：物理成绩多班级模块
+  if(!s.phy || !Array.isArray(s.phy.classes) || !s.phy.classes.length){
+    s.phy = {
+      classes: [{
+        id: 1,
+        name: (s.settings && s.settings.className) || "我的班级",
+        students: (s.students||[]).map(st=>({no:st.no, name:st.name})),
+        exams: ["第一次月考"],
+        scores: [{}]
+      }],
+      curClass: 0,
+      curExam: 0
+    };
+  }
+  s.phy.classes.forEach((pc,i)=>{
+    if(!Array.isArray(pc.students)) pc.students = [];
+    if(!Array.isArray(pc.exams) || !pc.exams.length) pc.exams = ["第一次月考"];
+    if(!Array.isArray(pc.scores)) pc.scores = pc.exams.map(()=>({}));
+    while(pc.scores.length < pc.exams.length) pc.scores.push({});
+  });
+  if(s.phy.curClass==null || s.phy.curClass>=s.phy.classes.length) s.phy.curClass = 0;
+  if(s.phy.curExam==null || s.phy.curExam>=s.phy.classes[s.phy.curClass].exams.length) s.phy.curExam = 0;
   return s;
 }
 
@@ -1332,7 +1435,9 @@ const ROUTE_META = {
   class:["班级管理","学生与班务档案"],
   grades:["成绩分析","成绩与学情"],
   tasks:["个人事务","待办与职称材料"],
-  seating:["座位排列","教室座位布局"]
+  seating:["座位排列","教室座位布局"],
+  phys:["物理成绩","多班级物理成绩录入"],
+  summary:["学情总结","本周班务与学情分析"]
 };
 let currentRoute = "home";
 function router(){
@@ -1361,6 +1466,8 @@ function render(){
   else if(r==="grades") renderGrades();
   else if(r==="tasks") renderTasks();
   else if(r==="seating") renderSeating();
+  else if(r==="phys") renderPhys();
+  else if(r==="summary") renderSummary();
 }
 // 根据开学日期自动计算当前教学周（9.1 为第 1 周；开学前按第 1 周计）
 function currentWeek(){
@@ -1562,13 +1669,18 @@ function renderAttend(){
   }).join("") || `<div style="font-size:13px;color:var(--muted);padding:6px 0">今日全勤</div>`;
 }
 function renderDiscipline(){
-  $("#disciplineList").innerHTML = state.discipline.map(d=>`
-    <div class="remind-item"><div class="ic" style="background:#f6e0dc;color:var(--bad)">
+  const totalDed = state.discipline.reduce((a,d)=>a+(parseFloat(d.deduct)||0),0);
+  $("#disciplineTotal").textContent = totalDed;
+  $("#disciplineList").innerHTML = state.discipline.map(d=>{
+    const dd = parseFloat(d.deduct)||0;
+    const badge = dd>0 ? `<span class="tag red" style="margin-left:6px">扣${dd}分</span>` : "";
+    return `<div class="remind-item"><div class="ic" style="background:#f6e0dc;color:var(--bad)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
-    <div style="flex:1"><div style="font-weight:600">${d.d} · ${esc(d.s)} · ${esc(d.t)}</div>
+    <div style="flex:1"><div style="font-weight:600">${d.d} · ${esc(d.s)} · ${esc(d.t)}${badge}</div>
       <div style="font-size:12px;color:var(--muted)">${esc(d.h)}</div></div>
     <button class="btn btn-ghost btn-sm" data-edit="disc:${d.id}">编辑</button>
-    <button class="btn btn-ghost btn-sm" data-del="disc:${d.id}" style="color:var(--bad)">删</button></div>`).join("") || `<div style="font-size:13px;color:var(--muted);padding:6px 0">暂无违纪记录</div>`;
+    <button class="btn btn-ghost btn-sm" data-del="disc:${d.id}" style="color:var(--bad)">删</button></div>`;
+  }).join("") || `<div style="font-size:13px;color:var(--muted);padding:6px 0">暂无违纪记录</div>`;
 }
 function renderLogs(){
   $("#logList").innerHTML = state.logs.map(l=>`
@@ -1660,6 +1772,186 @@ function renderGrades(){
 }
 
 /* ===== 个人事务 ===== */
+/* ===== 物理成绩（多班级） ===== */
+function phyCur(){
+  const pc = state.phy.classes[state.phy.curClass];
+  if(!pc) return null;
+  const ei = Math.max(0, Math.min(state.phy.curExam, pc.exams.length-1));
+  return {pc, ei};
+}
+function renderPhys(){
+  const cur = phyCur(); if(!cur) return;
+  const {pc, ei} = cur;
+  $("#phyClassSeg").innerHTML = state.phy.classes.map((c,i)=>`<button data-pc="${i}" class="${i===state.phy.curClass?"on":""}">${esc(c.name)}</button>`).join("");
+  $("#phyExamSeg").innerHTML = pc.exams.map((n,i)=>`<button data-pe="${i}" class="${i===ei?"on":""}">${esc(n)}</button>`).join("");
+  const scores = pc.scores[ei]||{};
+  const vals = pc.students.map(s=>scores[s.no]).filter(v=>v!=null&&!isNaN(v));
+  const avg = vals.length? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):"—";
+  const max = vals.length? Math.max(...vals):"—";
+  const min = vals.length? Math.min(...vals):"—";
+  const pass = vals.length? Math.round(vals.filter(v=>v>=60).length/vals.length*100):0;
+  $("#phyStatCards").innerHTML = [
+    ["参考人数", vals.length],
+    ["班级均分", avg],
+    ["最高分", max],
+    ["及格率", pass+"%"]
+  ].map(x=>`<div class="card stat-card"><div class="label">${x[0]}</div><div class="value">${x[1]}</div></div>`).join("");
+  const ranked = pc.students.map(s=>({s, sc:scores[s.no]!=null?+scores[s.no]:null})).sort((a,b)=>{
+    if(a.sc==null&&b.sc==null) return a.s.no.localeCompare(b.s.no);
+    if(a.sc==null) return 1;
+    if(b.sc==null) return -1;
+    return b.sc-a.sc;
+  });
+  const prevScores = ei>0 ? (pc.scores[ei-1]||{}) : null;
+  $("#phyRank").innerHTML = ranked.map((r,rank)=>{
+    if(r.sc==null){
+      return `<tr>
+        <td class="mono" style="color:var(--faint)">—</td>
+        <td class="mono">${r.s.no}</td>
+        <td><b>${esc(r.s.name)}</b></td>
+        <td><button class="btn btn-ghost btn-sm" data-phygrade="${r.s.no}"><b class="mono" style="color:var(--faint)">录入</b></button></td>
+        <td colspan="2"><span class="rank-change flat">未考</span></td>
+        <td><button class="btn btn-ghost btn-sm" data-phydel="${r.s.no}" style="color:var(--bad)">删</button></td></tr>`;
+    }
+    const prev = prevScores&&prevScores[r.s.no]!=null?+prevScores[r.s.no]:null;
+    const diff = prev==null?0:r.sc-prev;
+    const chg = prev==null?`<span class="rank-change flat">—</span>`
+      :diff>0?`<span class="rank-change up">↑${diff}</span>`:diff<0?`<span class="rank-change down">↓${Math.abs(diff)}</span>`:`<span class="rank-change flat">—</span>`;
+    const lv = r.sc>=85?["优","green"]:r.sc>=60?["达标","blue"]:["待提升","red"];
+    return `<tr>
+      <td><b class="mono">${rank+1}</b></td>
+      <td class="mono">${r.s.no}</td>
+      <td><b>${esc(r.s.name)}</b></td>
+      <td><button class="btn btn-ghost btn-sm" data-phygrade="${r.s.no}"><b class="mono" style="color:${lv[1]==="green"?"var(--good)":lv[1]==="red"?"var(--bad)":"var(--ink)"}">${r.sc}</b></button></td>
+      <td>${chg}</td>
+      <td><span class="tag ${lv[1]}">${lv[0]}</span></td>
+      <td><button class="btn btn-ghost btn-sm" data-phydel="${r.s.no}" style="color:var(--bad)">删</button></td></tr>`;
+  }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:24px">暂无学生，请点击「＋ 学生」添加</td></tr>`;
+}
+let editingPhyNo = null;
+function openPhyGradeModal(no){
+  const cur = phyCur(); if(!cur) return;
+  editingPhyNo = no;
+  const st = cur.pc.students.find(x=>x.no===no);
+  const v = (cur.pc.scores[cur.ei]||{})[no];
+  $("#gradeModalTitle").textContent = `录入物理成绩 · ${st?st.name:no}`;
+  $("#gradeInput").value = v!=null? v : "";
+  $("#gradeModal").classList.add("show");
+  setTimeout(()=>$("#gradeInput").focus(), 50);
+}
+
+/* ===== 学情总结 ===== */
+function collectSummary(){
+  const wk = currentWeek();
+  const attend = {
+    leave: state.attend.filter(a=>a.st==="请假").length,
+    late: state.attend.filter(a=>a.st==="迟到").length,
+    absent: state.attend.filter(a=>a.st==="缺勤").length
+  };
+  const discCount = state.discipline.length;
+  const discDed = state.discipline.reduce((a,d)=>a+(parseFloat(d.deduct)||0),0);
+  const stuDisc = {};
+  state.discipline.forEach(d=>{ if(d.s){ stuDisc[d.s]=(stuDisc[d.s]||0)+1; } });
+  const topDisc = Object.entries(stuDisc).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const stuDed = {};
+  state.discipline.forEach(d=>{ if(d.s){ stuDed[d.s]=(stuDed[d.s]||0)+(parseFloat(d.deduct)||0); } });
+  const topDed = Object.entries(stuDed).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const contactCount = state.contacts.length;
+  const logCount = state.logs.length;
+  const gi = lastExamIdx();
+  const st = statOf(gi, -1);
+  const avg = st.avg, passRate = st.passRate, maxS = st.max, minS = st.min;
+  const goodStudents = state.students.filter(s=>{
+    return !Object.keys(stuDisc).includes(s.name) && !state.attend.some(a=>a.no===s.no && (a.st==="迟到"||a.st==="缺勤"));
+  }).slice(0,8);
+  return {wk, attend, discCount, discDed, topDisc, topDed, contactCount, logCount, avg, passRate, maxS, minS, goodStudents};
+}
+function renderSummary(){
+  const s = collectSummary();
+  const lines = [];
+  lines.push(`教学第 ${s.wk} 周班级情况汇总：`);
+  lines.push(`· 考勤：请假 ${s.attend.leave} 人次，迟到 ${s.attend.late} 人次，缺勤 ${s.attend.absent} 人次；`);
+  lines.push(`· 纪律：累计违纪 ${s.discCount} 次，合计扣分 ${s.discDed} 分；`);
+  lines.push(`· 家校沟通 ${s.contactCount} 次，班务记录 ${s.logCount} 条；`);
+  lines.push(`· 最近考试总分：均分 ${s.avg}，及格率 ${s.passRate}%，最高 ${s.maxS}，最低 ${s.minS}。`);
+  const advises = [];
+  if(s.discCount>=3) advises.push(`本周违纪较多（${s.discCount} 次），建议在班会上重申课堂纪律，对高频违纪学生个别谈话。`);
+  if(s.discDed>=5) advises.push(`累计扣分 ${s.discDed} 分偏高，建议与家长联动，共同约定奖惩机制。`);
+  if(s.attend.late+s.attend.absent>=3) advises.push(`迟到/缺勤人次较多，建议严查早读考勤，迟到学生登记补训。`);
+  if(s.passRate<60) advises.push(`最近考试及格率仅 ${s.passRate}%，建议利用课间分层辅导薄弱学生，布置基础题过关清单。`);
+  if(s.contactCount<2) advises.push(`本周家校沟通偏少，建议主动与 1-2 位重点关注学生家长通一次电话。`);
+  if(advises.length===0) advises.push(`本周班级整体平稳，继续保持；可适当安排一次学科学习经验分享，树立标杆。`);
+  const topDiscTxt = s.topDisc.length? s.topDisc.map(x=>`${x[0]}（${x[1]}次）`).join("、") : "无";
+  const topDedTxt = s.topDed.length? s.topDed.map(x=>`${x[0]}（扣${x[1]}分）`).join("、") : "无";
+  const goodTxt = s.goodStudents.length? s.goodStudents.map(x=>x.name).join("、") : "暂无";
+  $("#summaryBody").innerHTML = `
+    <div class="grid grid-4" style="margin-bottom:16px">
+      <div class="card stat-card"><div class="label">违纪次数</div><div class="value" style="color:var(--bad)">${s.discCount}</div></div>
+      <div class="card stat-card"><div class="label">累计扣分</div><div class="value" style="color:var(--bad)">${s.discDed}</div></div>
+      <div class="card stat-card"><div class="label">家校沟通</div><div class="value" style="color:var(--info)">${s.contactCount}</div></div>
+      <div class="card stat-card"><div class="label">考试及格率</div><div class="value" style="color:var(--good)">${s.passRate}%</div></div>
+    </div>
+    <div class="card pad">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px">本周班级总结</h3>
+      <div style="white-space:pre-wrap;font-size:14px;line-height:1.8">${esc(lines.join("\n"))}</div>
+    </div>
+    <div class="grid grid-2 mt-16">
+      <div class="card pad">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:8px">重点关注</h3>
+        <div style="font-size:13.5px;line-height:1.9">
+          <b style="color:var(--bad)">高频违纪：</b>${esc(topDiscTxt)}<br>
+          <b style="color:var(--bad)">扣分较多：</b>${esc(topDedTxt)}
+        </div>
+      </div>
+      <div class="card pad">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:8px">表现良好</h3>
+        <div style="font-size:13.5px;line-height:1.9">本周无违纪且考勤正常：<span style="color:var(--good);font-weight:600">${esc(goodTxt)}</span></div>
+      </div>
+    </div>
+    <div class="card pad mt-16">
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:8px">改进建议</h3>
+      <ul style="font-size:13.5px;line-height:1.9;padding-left:20px">
+        ${advises.map(a=>`<li>${esc(a)}</li>`).join("")}
+      </ul>
+    </div>`;
+}
+function openMeetingPPT(){
+  const s = collectSummary();
+  const className = state.settings.className || "本班";
+  const week = s.wk;
+  const goodList = s.goodStudents.map(x=>`<li>${esc(x.name)}</li>`).join("") || "<li>继续保持，人人进步</li>";
+  const discList = s.topDisc.map(x=>`<li>${esc(x[0])}：本周 ${x[1]} 次</li>`).join("") || "<li>本周无违纪记录</li>";
+  const slides = [
+    {t:"封面", inner:`<h1>第 ${week} 周主题班会</h1><p>${className} · 纪律与学风</p><p style="font-size:16px;opacity:.7">任课教师：${esc(state.settings.teacher||"")}</p>`},
+    {t:"本周回顾", inner:`<h2>本周班级情况</h2><div class="ppt-stats"><div><b>${s.discCount}</b><span>违纪次数</span></div><div><b>${s.discDed}</b><span>扣分</span></div><div><b>${s.contactCount}</b><span>家校沟通</span></div><div><b>${s.passRate}%</b><span>及格率</span></div></div>`},
+    {t:"表扬", inner:`<h2>本周之星 · 表扬名单</h2><ul class="ppt-list">${goodList}</ul><p class="ppt-note">望大家向榜样学习，自律自强。</p>`},
+    {t:"反思", inner:`<h2>需要改进的地方</h2><ul class="ppt-list">${discList}</ul><p class="ppt-note">违纪不是终点，改正就是进步。</p>`},
+    {t:"倡议", inner:`<h2>文明班级倡议书</h2><div class="ppt-list"><p>1. 上课认真听讲，不玩手机、不交头接耳</p><p>2. 课间文明休息，不追逐打闹</p><p>3. 按时到校，不迟到不早退</p><p>4. 作业独立完成，主动问老师</p></div>`},
+    {t:"目标", inner:`<h2>下周目标</h2><div class="ppt-list"><p>· 违纪次数下降 50%</p><p>· 作业上交率 100%</p><p>· 课堂抬头率、参与度明显提升</p></div><p class="ppt-note">让我们共同努力，争创文明班级！</p>`}
+  ];
+  const mask = document.createElement("div");
+  mask.className = "ppt-mask";
+  mask.innerHTML = `<div class="ppt-top"><span id="pptIdx">1 / ${slides.length}</span><button class="btn btn-ghost btn-sm" id="pptClose">✕ 退出</button></div>
+    <div class="ppt-stage" id="pptStage"></div>
+    <div class="ppt-nav"><button class="btn btn-ghost btn-sm" id="pptPrev">‹ 上一页</button><button class="btn btn-ghost btn-sm" id="pptNext">下一页 ›</button></div>`;
+  document.body.appendChild(mask);
+  let pi = 0;
+  function draw(){
+    $("#pptIdx").textContent = (pi+1)+" / "+slides.length;
+    $("#pptStage").innerHTML = `<div class="ppt-slide"><div class="ppt-tag">${slides[pi].t}</div>${slides[pi].inner}</div>`;
+  }
+  draw();
+  mask.querySelector("#pptClose").addEventListener("click", ()=>mask.remove());
+  mask.querySelector("#pptPrev").addEventListener("click", ()=>{ pi=(pi+slides.length-1)%slides.length; draw(); });
+  mask.querySelector("#pptNext").addEventListener("click", ()=>{ pi=(pi+1)%slides.length; draw(); });
+  mask.addEventListener("click", e=>{ if(e.target===mask) mask.remove(); });
+  document.addEventListener("keydown", function pptKey(e){
+    if(!document.body.contains(mask)){ document.removeEventListener("keydown", pptKey); return; }
+    if(e.key==="ArrowLeft"){ pi=(pi+slides.length-1)%slides.length; draw(); }
+    if(e.key==="ArrowRight"||e.key===" "){ pi=(pi+1)%slides.length; draw(); }
+    if(e.key==="Escape"){ mask.remove(); }
+  });
+}
 function renderTasks(){
   renderTodoList();
   $("#todoCount").textContent = `${state.todos.filter(t=>!t.done).length} 项未完成`;
@@ -2082,6 +2374,7 @@ function bindEvents(){
         {k:"d", label:"日期", type:"text", ph:"如 9.30"},
         {k:"s", label:"学生", type:"text", ph:"学生姓名"},
         {k:"t", label:"违纪事项", type:"text", ph:"如：上课玩手机"},
+        {k:"deduct", label:"扣分", type:"text", ph:"如 2（不填记 0）"},
         {k:"h", label:"处理结果", type:"text", ph:"如：已没收并通知家长"}
       ]},
     log:{ title:"班务日志", hint:"记录班级事务与安排", fields:[
@@ -2373,6 +2666,20 @@ function openGradeModal(no){
 $("#gradeCancel").addEventListener("click", ()=>$("#gradeModal").classList.remove("show"));
 $("#gradeModal").addEventListener("click", e=>{ if(e.target.id==="gradeModal") $("#gradeModal").classList.remove("show"); });
 $("#gradeSave").addEventListener("click", ()=>{
+  // 物理成绩编辑走独立通道
+  if(editingPhyNo!=null){
+    const v = $("#gradeInput").value;
+    const cur = phyCur(); if(!cur) return;
+    if(v===""){
+      delete cur.pc.scores[cur.ei][editingPhyNo];
+    } else {
+      const n = parseFloat(v);
+      if(isNaN(n)){ toast("请输入有效数字"); return; }
+      cur.pc.scores[cur.ei][editingPhyNo] = n;
+    }
+    saveState(); renderPhys(); $("#gradeModal").classList.remove("show"); editingPhyNo=null; toast("物理成绩已保存");
+    return;
+  }
   const v = $("#gradeInput").value;
   const gi = state.gradeIdx, si = state.subjectIdx;
   if(v===""){
@@ -2397,6 +2704,76 @@ $("#gradeSave").addEventListener("click", ()=>{
   saveState(); renderGrades(); $("#gradeModal").classList.remove("show"); toast("成绩已保存");
 });
 
+
+/* ===== 物理成绩事件 ===== */
+$("#phyClassSeg").addEventListener("click", e=>{
+  const b = e.target.closest("[data-pc]");
+  if(b){ state.phy.curClass = +b.dataset.pc; state.phy.curExam = 0; saveState(); renderPhys(); }
+});
+$("#phyExamSeg").addEventListener("click", e=>{
+  const b = e.target.closest("[data-pe]");
+  if(b){ state.phy.curExam = +b.dataset.pe; saveState(); renderPhys(); }
+});
+$("#btnAddPhyClass").addEventListener("click", ()=>{
+  const name = prompt("新班级名称：", "初二(4)班");
+  if(!name||!name.trim()) return;
+  const maxId = state.phy.classes.reduce((m,c)=>Math.max(m,c.id||0),0);
+  state.phy.classes.push({id:maxId+1, name:name.trim(), students:[], exams:["第一次月考"], scores:[{}]});
+  state.phy.curClass = state.phy.classes.length-1; state.phy.curExam = 0;
+  saveState(); renderPhys(); toast("已添加班级");
+});
+$("#btnDelPhyClass").addEventListener("click", ()=>{
+  if(state.phy.classes.length<=1){ toast("至少保留一个班级"); return; }
+  const cur = phyCur(); if(!cur) return;
+  if(!confirm(`确定删除「${cur.pc.name}」？该班全部成绩将一并删除。`)) return;
+  state.phy.classes.splice(state.phy.curClass,1);
+  state.phy.curClass = 0; state.phy.curExam = 0;
+  saveState(); renderPhys(); toast("已删除班级");
+});
+$("#btnAddPhyExam").addEventListener("click", ()=>{
+  const cur = phyCur(); if(!cur) return;
+  cur.pc.exams.push("第"+(cur.pc.exams.length+1)+"次考试");
+  cur.pc.scores.push({});
+  state.phy.curExam = cur.pc.exams.length-1;
+  saveState(); renderPhys(); toast("已添加考试");
+});
+$("#btnDelPhyExam").addEventListener("click", ()=>{
+  const cur = phyCur(); if(!cur) return;
+  if(cur.pc.exams.length<=1){ toast("至少保留一场考试"); return; }
+  if(!confirm(`确定删除「${cur.pc.exams[cur.ei]}」？该场成绩将一并删除。`)) return;
+  cur.pc.exams.splice(cur.ei,1);
+  cur.pc.scores.splice(cur.ei,1);
+  if(state.phy.curExam>=cur.pc.exams.length) state.phy.curExam = cur.pc.exams.length-1;
+  saveState(); renderPhys(); toast("已删除本场考试");
+});
+$("#btnAddPhyStu").addEventListener("click", ()=>{
+  const cur = phyCur(); if(!cur) return;
+  const no = prompt("学号：", "");
+  if(!no||!no.trim()) return;
+  const name = prompt("姓名：", "");
+  if(!name||!name.trim()) return;
+  cur.pc.students.push({no:no.trim(), name:name.trim()});
+  saveState(); renderPhys(); toast("已添加学生");
+});
+$("#phyRank").addEventListener("click", e=>{
+  const d = e.target.closest("[data-phydel]");
+  if(d){
+    const cur = phyCur(); if(!cur) return;
+    const no = d.dataset.phydel;
+    const st = cur.pc.students.find(x=>x.no===no);
+    if(!confirm(`确定删除学生「${st?st.name:no}」？其全部物理成绩将一并删除。`)) return;
+    cur.pc.students = cur.pc.students.filter(x=>x.no!==no);
+    cur.pc.scores.forEach(sc=>delete sc[no]);
+    saveState(); renderPhys(); toast("已删除学生");
+    return;
+  }
+  const g = e.target.closest("[data-phygrade]");
+  if(g) openPhyGradeModal(g.dataset.phygrade);
+});
+
+/* ===== 学情总结事件 ===== */
+$("#btnGenSummary").addEventListener("click", ()=>{ renderSummary(); toast("已生成本周总结"); });
+$("#btnGenPPT").addEventListener("click", ()=>{ openMeetingPPT(); });
 /* ===== 调课 ===== */
 function openSwap(){
   const cls = state.schedView;
