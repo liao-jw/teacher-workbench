@@ -494,12 +494,14 @@ td .mono{font-variant-numeric:tabular-nums}
             <input id="stuSearch" placeholder="搜索姓名 / 学号…">
           </div>
         </div>
+        <div class="grid grid-4" id="behaviorStatCards" style="margin-bottom:14px"></div>
         <div class="tabs" id="classTabs">
           <button data-tab="list" class="on">学生名单</button>
           <button data-tab="attend">考勤</button>
           <button data-tab="discipline">违纪记录</button>
           <button data-tab="logs">班务日志</button>
           <button data-tab="contact">家校沟通</button>
+          <button data-tab="reward">素养加分</button>
         </div>
 
         <div class="pane on" data-pane="list">
@@ -567,6 +569,16 @@ td .mono{font-variant-numeric:tabular-nums}
               <button class="btn btn-primary btn-sm" id="btnAddContact">＋ 添加记录</button>
             </div>
             <div id="contactList"></div>
+          </div>
+        </div>
+
+        <div class="pane" data-pane="reward">
+          <div class="card pad">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h3 style="font-size:15px;font-weight:700">行为素养分加分记录（基础60分，满分100）</h3>
+              <button class="btn btn-primary btn-sm" id="btnAddReward">＋ 添加加分</button>
+            </div>
+            <div id="rewardList"></div>
           </div>
         </div>
       </section>
@@ -1268,6 +1280,7 @@ function normalizeState(s){
       }
     });
   }
+  if(!Array.isArray(s.rewards)) s.rewards = [];
   // 兼容：物理成绩多班级模块
   if(!s.phy || !Array.isArray(s.phy.classes) || !s.phy.classes.length){
     s.phy = {
@@ -1624,12 +1637,50 @@ function openCell(d,s){
 
 /* ===== 班级管理 ===== */
 let classTab = "list";
+function behaviorScore(no){
+  const add = (state.rewards||[]).filter(r=>r.s===no).reduce((a,r)=>a+(parseFloat(r.point)||0),0);
+  const ded = state.discipline.filter(d=>d.s===no).reduce((a,d)=>a+(parseFloat(d.deduct)||0),0);
+  return 60 + add - ded;
+}
+function behaviorLevel(score){
+  if(score>=85) return ["优秀","var(--good)"];
+  if(score>=70) return ["良好","var(--info)"];
+  if(score>=60) return ["合格","var(--warn)"];
+  return ["不合格","var(--bad)"];
+}
+function behaviorLevelOfNo(no){ return behaviorLevel(behaviorScore(no)); }
+function renderBehavior(){
+  const scores = state.students.map(s=>behaviorScore(s.no));
+  const avg = scores.length? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):"—";
+  const max = scores.length? Math.max(...scores):"—";
+  const min = scores.length? Math.min(...scores):"—";
+  const totalDed = state.discipline.reduce((a,d)=>a+(parseFloat(d.deduct)||0),0);
+  const totalAdd = (state.rewards||[]).reduce((a,r)=>a+(parseFloat(r.point)||0),0);
+  const lv = behaviorLevelOfNo("") || ["",""];
+  $("#behaviorStatCards").innerHTML = [
+    ["素养均分", avg, "var(--accent)"],
+    ["最高/最低", max+"/"+min, "var(--good)"],
+    ["累计加分", "+"+totalAdd, "var(--good)"],
+    ["累计扣分", totalDed, "var(--bad)"]
+  ].map(x=>`<div class="card stat-card"><div class="label">${x[0]}</div><div class="value" style="color:${x[2]}">${x[1]}</div></div>`).join("");
+}
+function renderRewards(){
+  $("#rewardList").innerHTML = (state.rewards||[]).map(r=>`
+    <div class="log-item"><div class="date"><b style="color:var(--good)">+${r.point||0}</b><span>分</span></div>
+    <div class="bd"><div class="tt">${esc(r.s)} · ${esc(r.t)}</div><div class="ds">${esc(r.d)} · ${esc(r.h||"")}</div></div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <button class="btn btn-ghost btn-sm" data-edit="reward:${r.id}">编辑</button>
+      <button class="btn btn-ghost btn-sm" data-del="reward:${r.id}" style="color:var(--bad)">删</button>
+    </div></div>`).join("") || `<div style="font-size:13px;color:var(--muted);padding:6px 0">暂无加分记录，点击「＋ 添加加分」记录好人好事、比赛获奖等</div>`;
+}
 function renderClass(){
   renderStuTable("");
   renderAttend();
   renderDiscipline();
   renderLogs();
   renderContacts();
+  renderRewards();
+  renderBehavior();
 }
 function renderStuTable(kw){
   const q = (kw||"").trim().toLowerCase();
@@ -1864,7 +1915,12 @@ function collectSummary(){
   const goodStudents = state.students.filter(s=>{
     return !Object.keys(stuDisc).includes(s.name) && !state.attend.some(a=>a.no===s.no && (a.st==="迟到"||a.st==="缺勤"));
   }).slice(0,8);
-  return {wk, attend, discCount, discDed, topDisc, topDed, contactCount, logCount, avg, passRate, maxS, minS, goodStudents};
+  // 行为素养分
+  const bScores = state.students.map(s=>({name:s.name, score:behaviorScore(s.no)}));
+  const bAvg = bScores.length? (bScores.reduce((a,b)=>a+b.score,0)/bScores.length).toFixed(1):"—";
+  const bLow = [...bScores].sort((a,b)=>a.score-b.score).slice(0,5);
+  const bWarn = bScores.filter(b=>b.score<60).map(b=>b.name);
+  return {wk, attend, discCount, discDed, topDisc, topDed, contactCount, logCount, avg, passRate, maxS, minS, goodStudents, bAvg, bLow, bWarn};
 }
 function renderSummary(){
   const s = collectSummary();
@@ -1880,6 +1936,7 @@ function renderSummary(){
   if(s.attend.late+s.attend.absent>=3) advises.push(`迟到/缺勤人次较多，建议严查早读考勤，迟到学生登记补训。`);
   if(s.passRate<60) advises.push(`最近考试及格率仅 ${s.passRate}%，建议利用课间分层辅导薄弱学生，布置基础题过关清单。`);
   if(s.contactCount<2) advises.push(`本周家校沟通偏少，建议主动与 1-2 位重点关注学生家长通一次电话。`);
+  if(s.bWarn.length>0) advises.push(`行为素养分不合格学生：${s.bWarn.join("、")}（基础60-扣分），建议本周内谈话并联系家长。`);
   if(advises.length===0) advises.push(`本周班级整体平稳，继续保持；可适当安排一次学科学习经验分享，树立标杆。`);
   const topDiscTxt = s.topDisc.length? s.topDisc.map(x=>`${x[0]}（${x[1]}次）`).join("、") : "无";
   const topDedTxt = s.topDed.length? s.topDed.map(x=>`${x[0]}（扣${x[1]}分）`).join("、") : "无";
@@ -1890,6 +1947,7 @@ function renderSummary(){
       <div class="card stat-card"><div class="label">累计扣分</div><div class="value" style="color:var(--bad)">${s.discDed}</div></div>
       <div class="card stat-card"><div class="label">家校沟通</div><div class="value" style="color:var(--info)">${s.contactCount}</div></div>
       <div class="card stat-card"><div class="label">考试及格率</div><div class="value" style="color:var(--good)">${s.passRate}%</div></div>
+      <div class="card stat-card"><div class="label">素养均分</div><div class="value" style="color:var(--accent)">${s.bAvg}</div></div>
     </div>
     <div class="card pad">
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px">本周班级总结</h3>
@@ -2392,10 +2450,17 @@ function bindEvents(){
         {k:"d", label:"时间", type:"text", ph:"如 周四 15:00"},
         {k:"t", label:"主题", type:"text", ph:"活动主题"},
         {k:"loc", label:"地点", type:"text", ph:"活动地点"}
+      ]},
+    reward:{ title:"加分记录", hint:"学生行为素养分加分（好人好事/比赛/公益等）", fields:[
+        {k:"d", label:"日期", type:"text", ph:"如 9.30"},
+        {k:"s", label:"学生", type:"text", ph:"学生姓名"},
+        {k:"t", label:"加分事由", type:"text", ph:"如：校运会获奖"},
+        {k:"point", label:"加分", type:"text", ph:"如 2"},
+        {k:"h", label:"备注", type:"text", ph:"如：校级二等奖"}
       ]}
   };
   let recCtx = {type:null, id:null, arr:null};
-  function recArr(t){ return {attend:state.attend, disc:state.discipline, log:state.logs, contact:state.contacts, research:state.research}[t]; }
+  function recArr(t){ return {attend:state.attend, disc:state.discipline, log:state.logs, contact:state.contacts, research:state.research, reward:state.rewards||[]}[t]; }
   function openRec(type, id){
     const cfg = REC[type]; if(!cfg) return;
     recCtx = {type, id: id??null, arr: recArr(type)};
@@ -2413,6 +2478,28 @@ function bindEvents(){
       }
       return `<label>${f.label}</label><input data-f="${f.k}" type="text" value="${esc(v)}" placeholder="${f.ph||""}">`;
     }).join("");
+    // 违纪记录：常用违纪快捷选项
+    if(type==="disc"){
+      const presets = [
+        ["迟到",1],["早退",1],["旷课",5],["上课玩手机",2],["课堂讲话",1],
+        ["未穿校服",1],["未戴校卡",1],["发型不合格",1],["课间打闹",1],["未做眼保健操",1]
+      ];
+      const tInput = document.querySelector('[data-f="t"]');
+      if(tInput){
+        const wrap = document.createElement("div");
+        wrap.style.cssText = "margin:6px 0 10px";
+        wrap.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">常用违纪（点击自动填入）：</div>`+
+          presets.map(p=>`<button type="button" class="btn btn-ghost btn-sm" style="margin:0 6px 6px 0" data-disc-presets="${esc(p[0])}" data-ded="${p[1]}">${p[0]} · 扣${p[1]}分</button>`).join("");
+        tInput.parentNode.insertBefore(wrap, tInput.nextSibling);
+        wrap.querySelectorAll("[data-disc-presets]").forEach(b=>{
+          b.addEventListener("click", ()=>{
+            tInput.value = b.dataset.discPresets;
+            const dEl = document.querySelector('[data-f="deduct"]');
+            if(dEl) dEl.value = b.dataset.ded;
+          });
+        });
+      }
+    }
     $("#recModal").classList.add("show");
     // 考勤时自动填入第一个未记录的学生学号
     if(type==="attend" && !id && !cur){
@@ -2424,6 +2511,7 @@ function bindEvents(){
   $("#btnAddAttend").addEventListener("click", ()=>openRec("attend"));
   $("#btnAddDisc").addEventListener("click", ()=>openRec("disc"));
   $("#btnAddContact").addEventListener("click", ()=>openRec("contact"));
+  $("#btnAddReward").addEventListener("click", ()=>openRec("reward"));
   $("#btnAddResearch").addEventListener("click", ()=>openRec("research"));
   $("#recCancel").addEventListener("click", ()=>$("#recModal").classList.remove("show"));
   $("#recModal").addEventListener("click", e=>{ if(e.target.id==="recModal") $("#recModal").classList.remove("show"); });
@@ -2448,11 +2536,12 @@ function bindEvents(){
     else if(recCtx.type==="disc") renderDiscipline();
     else if(recCtx.type==="log") renderLogs();
     else if(recCtx.type==="contact") renderContacts();
+    else if(recCtx.type==="reward"){ renderRewards(); renderBehavior(); }
     else if(recCtx.type==="research") renderTasks();
     $("#recModal").classList.remove("show");
   });
   // 列表内的编辑/删除委托（各记录列表）
-  [["attendList","attend"],["disciplineList","disc"],["logList","log"],["contactList","contact"],["teachResearch","research"]].forEach(([listId,type])=>{
+  [["attendList","attend"],["disciplineList","disc"],["logList","log"],["contactList","contact"],["rewardList","reward"],["teachResearch","research"]].forEach(([listId,type])=>{
     const el = document.getElementById(listId);
     if(!el) return;
     el.addEventListener("click", e=>{
@@ -2467,6 +2556,7 @@ function bindEvents(){
         else if(type==="disc") renderDiscipline();
         else if(type==="log") renderLogs();
         else if(type==="contact") renderContacts();
+        else if(type==="reward"){ renderRewards(); renderBehavior(); }
         else if(type==="research") renderTasks();
         toast("已删除");
       }
