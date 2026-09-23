@@ -739,8 +739,14 @@ td .mono{font-variant-numeric:tabular-nums}
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <div class="seg" id="phyExamSeg"></div>
             <button class="btn btn-ghost btn-sm" id="btnAddPhyExam">＋ 考试</button>
+            <button class="btn btn-ghost btn-sm" id="btnRenamePhyExam">改名</button>
             <button class="btn btn-ghost btn-sm" id="btnDelPhyExam" style="color:var(--bad)">删考试</button>
             <button class="btn btn-ghost btn-sm" id="btnAddPhyStu">＋ 学生</button>
+            <button class="btn btn-ghost btn-sm" id="btnPhyStuTpl">名单模板</button>
+            <button class="btn btn-ghost btn-sm" id="btnPhyStuImport">导入名单</button>
+            <button class="btn btn-ghost btn-sm" id="btnPhyGradeTpl">成绩模板</button>
+            <button class="btn btn-ghost btn-sm" id="btnPhyGradeImport">导入成绩</button>
+            <input type="file" id="phyFile" accept=".xlsx,.csv" style="display:none">
           </div>
         </div>
         <div class="grid grid-4" id="phyStatCards"></div>
@@ -1855,40 +1861,21 @@ function renderPhys(){
   });
   const prevScores = ei>0 ? (pc.scores[ei-1]||{}) : null;
   $("#phyRank").innerHTML = ranked.map((r,rank)=>{
-    if(r.sc==null){
-      return `<tr>
-        <td class="mono" style="color:var(--faint)">—</td>
-        <td class="mono">${r.s.no}</td>
-        <td><b>${esc(r.s.name)}</b></td>
-        <td><button class="btn btn-ghost btn-sm" data-phygrade="${r.s.no}"><b class="mono" style="color:var(--faint)">录入</b></button></td>
-        <td colspan="2"><span class="rank-change flat">未考</span></td>
-        <td><button class="btn btn-ghost btn-sm" data-phydel="${r.s.no}" style="color:var(--bad)">删</button></td></tr>`;
-    }
     const prev = prevScores&&prevScores[r.s.no]!=null?+prevScores[r.s.no]:null;
-    const diff = prev==null?0:r.sc-prev;
-    const chg = prev==null?`<span class="rank-change flat">—</span>`
+    const diff = prev==null||r.sc==null?null:r.sc-prev;
+    const chg = diff==null?`<span class="rank-change flat">—</span>`
       :diff>0?`<span class="rank-change up">↑${diff}</span>`:diff<0?`<span class="rank-change down">↓${Math.abs(diff)}</span>`:`<span class="rank-change flat">—</span>`;
-    const lv = r.sc>=85?["优","green"]:r.sc>=60?["达标","blue"]:["待提升","red"];
+    const lv = r.sc==null?["",""]:r.sc>=85?["优","green"]:r.sc>=60?["达标","blue"]:["待提升","red"];
+    const scColor = r.sc==null?"var(--faint)":lv[1]==="green"?"var(--good)":lv[1]==="red"?"var(--bad)":"var(--ink)";
     return `<tr>
-      <td><b class="mono">${rank+1}</b></td>
+      <td><b class="mono">${r.sc==null?"—":(rank+1)}</b></td>
       <td class="mono">${r.s.no}</td>
-      <td><b>${esc(r.s.name)}</b></td>
-      <td><button class="btn btn-ghost btn-sm" data-phygrade="${r.s.no}"><b class="mono" style="color:${lv[1]==="green"?"var(--good)":lv[1]==="red"?"var(--bad)":"var(--ink)"}">${r.sc}</b></button></td>
+      <td><input class="phy-name-inp" data-phyname="${r.s.no}" value="${esc(r.s.name)}" style="width:90px;border:none;background:transparent;font-weight:600;font-size:14px;color:var(--ink)"></td>
+      <td><input class="phy-score-inp" data-physcore="${r.s.no}" value="${r.sc==null?"":r.sc}" placeholder="录入" style="width:70px;border:1px dashed var(--line);border-radius:8px;padding:4px 8px;font-family:monospace;font-weight:700;color:${scColor};text-align:center" inputmode="decimal"></td>
       <td>${chg}</td>
-      <td><span class="tag ${lv[1]}">${lv[0]}</span></td>
+      <td>${r.sc==null?"<span style=\"color:var(--faint);font-size:12px\">未考</span>":`<span class="tag ${lv[1]}">${lv[0]}</span>`}</td>
       <td><button class="btn btn-ghost btn-sm" data-phydel="${r.s.no}" style="color:var(--bad)">删</button></td></tr>`;
   }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:24px">暂无学生，请点击「＋ 学生」添加</td></tr>`;
-}
-let editingPhyNo = null;
-function openPhyGradeModal(no){
-  const cur = phyCur(); if(!cur) return;
-  editingPhyNo = no;
-  const st = cur.pc.students.find(x=>x.no===no);
-  const v = (cur.pc.scores[cur.ei]||{})[no];
-  $("#gradeModalTitle").textContent = `录入物理成绩 · ${st?st.name:no}`;
-  $("#gradeInput").value = v!=null? v : "";
-  $("#gradeModal").classList.add("show");
-  setTimeout(()=>$("#gradeInput").focus(), 50);
 }
 
 /* ===== 学情总结 ===== */
@@ -2756,20 +2743,6 @@ function openGradeModal(no){
 $("#gradeCancel").addEventListener("click", ()=>$("#gradeModal").classList.remove("show"));
 $("#gradeModal").addEventListener("click", e=>{ if(e.target.id==="gradeModal") $("#gradeModal").classList.remove("show"); });
 $("#gradeSave").addEventListener("click", ()=>{
-  // 物理成绩编辑走独立通道
-  if(editingPhyNo!=null){
-    const v = $("#gradeInput").value;
-    const cur = phyCur(); if(!cur) return;
-    if(v===""){
-      delete cur.pc.scores[cur.ei][editingPhyNo];
-    } else {
-      const n = parseFloat(v);
-      if(isNaN(n)){ toast("请输入有效数字"); return; }
-      cur.pc.scores[cur.ei][editingPhyNo] = n;
-    }
-    saveState(); renderPhys(); $("#gradeModal").classList.remove("show"); editingPhyNo=null; toast("物理成绩已保存");
-    return;
-  }
   const v = $("#gradeInput").value;
   const gi = state.gradeIdx, si = state.subjectIdx;
   if(v===""){
@@ -2838,12 +2811,107 @@ $("#btnDelPhyExam").addEventListener("click", ()=>{
 });
 $("#btnAddPhyStu").addEventListener("click", ()=>{
   const cur = phyCur(); if(!cur) return;
-  const no = prompt("学号：", "");
-  if(!no||!no.trim()) return;
-  const name = prompt("姓名：", "");
-  if(!name||!name.trim()) return;
-  cur.pc.students.push({no:no.trim(), name:name.trim()});
-  saveState(); renderPhys(); toast("已添加学生");
+  // 自动生成下一个学号
+  const usedNos = cur.pc.students.map(s=>parseInt(s.no)).filter(x=>!isNaN(x));
+  const nextNo = usedNos.length? (Math.max(...usedNos)+1) : 1;
+  cur.pc.students.push({no: String(nextNo).padStart(2,"0"), name:"新学生"});
+  saveState(); renderPhys(); toast("已添加，请直接在表格内编辑姓名和成绩");
+});
+$("#btnRenamePhyExam").addEventListener("click", ()=>{
+  const cur = phyCur(); if(!cur) return;
+  const nn = prompt("考试名称：", cur.pc.exams[cur.ei]);
+  if(!nn||!nn.trim()) return;
+  cur.pc.exams[cur.ei] = nn.trim();
+  saveState(); renderPhys(); toast("已改名");
+});
+// 名单模板
+$("#btnPhyStuTpl").addEventListener("click", ()=>{
+  const ws = XLSX.utils.aoa_to_sheet([["学号","姓名"],["01","张三"],["02","李四"]]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "名单");
+  XLSX.writeFile(wb, "物理班级名单模板.xlsx");
+});
+// 成绩模板
+$("#btnPhyGradeTpl").addEventListener("click", ()=>{
+  const cur = phyCur(); if(!cur) return;
+  const rows = [["学号","姓名","物理得分"], ...cur.pc.students.map(s=>[s.no, s.name, ""])];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, cur.pc.exams[cur.ei]);
+  XLSX.writeFile(wb, "物理成绩模板.xlsx");
+});
+// 导入名单 / 导入成绩 共用文件选择
+let phyImportMode = "stu";
+$("#btnPhyStuImport").addEventListener("click", ()=>{ phyImportMode="stu"; $("#phyFile").click(); });
+$("#btnPhyGradeImport").addEventListener("click", ()=>{ phyImportMode="grade"; $("#phyFile").click(); });
+$("#phyFile").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const cur = phyCur(); if(!cur) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    try{
+      const wb = XLSX.read(new Uint8Array(ev.target.result), {type:"array"});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+      // 找表头行（含"学号"）
+      let hi = rows.findIndex(r=>r.some(c=>String(c).includes("学号")));
+      if(hi<0) hi=0;
+      const data = rows.slice(hi+1).filter(r=>r[0]!=null && String(r[0]).trim()!=="");
+      if(phyImportMode==="stu"){
+        // 导入名单：学号、姓名
+        const added = [];
+        data.forEach(r=>{
+          const no = String(r[0]).trim();
+          const name = String(r[1]||"").trim();
+          if(!name) return;
+          if(!cur.pc.students.find(x=>x.no===no)){
+            cur.pc.students.push({no, name});
+            added.push(name);
+          }
+        });
+        saveState(); renderPhys();
+        toast(`导入完成：新增 ${added.length} 名学生`);
+      } else {
+        // 导入成绩：学号、姓名、物理得分
+        let upd = 0;
+        data.forEach(r=>{
+          const no = String(r[0]).trim();
+          const sc = parseFloat(r[2]);
+          const st = cur.pc.students.find(x=>x.no===no);
+          if(st && !isNaN(sc)){
+            cur.pc.scores[cur.ei][no] = sc;
+            upd++;
+          }
+        });
+        saveState(); renderPhys();
+        toast(`导入完成：更新 ${upd} 条成绩`);
+      }
+    }catch(err){ toast("导入失败："+err.message); }
+    e.target.value = "";
+  };
+  reader.readAsArrayBuffer(f);
+});
+// inline 编辑：姓名、成绩（事件委托）
+$("#phyRank").addEventListener("focusout", e=>{
+  const t = e.target;
+  if(t.classList && t.classList.contains("phy-name-inp")){
+    const no = t.dataset.phyname;
+    const cur = phyCur(); if(!cur) return;
+    const st = cur.pc.students.find(x=>x.no===no);
+    if(st){ st.name = t.value.trim()||st.name; saveState(); renderPhys(); }
+  }
+  if(t.classList && t.classList.contains("phy-score-inp")){
+    const no = t.dataset.physcore;
+    const cur = phyCur(); if(!cur) return;
+    const v = t.value.trim();
+    if(v===""){ delete cur.pc.scores[cur.ei][no]; }
+    else {
+      const n = parseFloat(v);
+      if(isNaN(n)){ toast("请输入数字"); renderPhys(); return; }
+      cur.pc.scores[cur.ei][no] = n;
+    }
+    saveState(); renderPhys();
+  }
 });
 $("#phyRank").addEventListener("click", e=>{
   const d = e.target.closest("[data-phydel]");
@@ -2855,10 +2923,7 @@ $("#phyRank").addEventListener("click", e=>{
     cur.pc.students = cur.pc.students.filter(x=>x.no!==no);
     cur.pc.scores.forEach(sc=>delete sc[no]);
     saveState(); renderPhys(); toast("已删除学生");
-    return;
   }
-  const g = e.target.closest("[data-phygrade]");
-  if(g) openPhyGradeModal(g.dataset.phygrade);
 });
 
 /* ===== 学情总结事件 ===== */
